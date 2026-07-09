@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Buscar "{{ q }}" — Corralón Nicola{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>Resultados para "{{ q }}"</h1>
+</div>
+
+<div class="card">
+  <h2>Clientes</h2>
+  {% for c in resultados.clientes %}
+  <p><a href="{% url 'ventas:cliente_form' c.pk %}">{{ c.nombre }}</a> {% if c.cuit_dni %}— {{ c.cuit_dni }}{% endif %}</p>
+  {% empty %}<p class="empty-state">Sin resultados.</p>{% endfor %}
+</div>
+
+<div class="card">
+  <h2>Productos</h2>
+  {% for p in resultados.productos %}
+  <p><a href="{% url 'stock:producto_form' p.pk %}">{{ p.codigo }} — {{ p.nombre }}</a></p>
+  {% empty %}<p class="empty-state">Sin resultados.</p>{% endfor %}
+</div>
+
+<div class="card">
+  <h2>Pedidos</h2>
+  {% for pedido in resultados.pedidos %}
+  <p><a href="{% url 'ventas:pedido_detalle' pedido.pk %}">Pedido #{{ pedido.pk }} — {{ pedido.cliente }}</a></p>
+  {% empty %}<p class="empty-state">Sin resultados.</p>{% endfor %}
+</div>
+{% endblock %}

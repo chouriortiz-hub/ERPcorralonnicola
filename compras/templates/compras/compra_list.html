@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Compras — Corralón Nicola{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div><h1>Compras</h1><div class="page-subtitle">Compras a proveedores</div></div>
+  {% if permisos_modulos.compras > 1 %}<a class="btn btn-primary" href="{% url 'compras:compra_form' %}">+ Nueva compra</a>{% endif %}
+</div>
+
+<form method="get" class="filter-bar">
+  <select name="estado">
+    <option value="">Todos los estados</option>
+    {% for value, label in estados %}
+    <option value="{{ value }}" {% if value == estado %}selected{% endif %}>{{ label }}</option>
+    {% endfor %}
+  </select>
+  <button type="submit" class="btn-outline">Filtrar</button>
+</form>
+
+<div class="card">
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead><tr><th>#</th><th>Proveedor</th><th>Comprobante</th><th>Fecha</th><th>Estado</th><th class="numeric">Total</th><th></th></tr></thead>
+      <tbody>
+        {% for compra in compras %}
+        <tr>
+          <td>#{{ compra.pk }}</td>
+          <td>{{ compra.proveedor }}</td>
+          <td>{{ compra.numero_comprobante|default:"—" }}</td>
+          <td>{{ compra.fecha|date:"d/m/Y" }}</td>
+          <td>
+            {% if compra.estado == 'CONFIRMADA' %}<span class="badge badge-verde">{{ compra.get_estado_display }}</span>
+            {% elif compra.estado == 'ANULADA' %}<span class="badge badge-rojo">{{ compra.get_estado_display }}</span>
+            {% else %}<span class="badge badge-naranja">{{ compra.get_estado_display }}</span>{% endif %}
+          </td>
+          <td class="numeric">${{ compra.total|floatformat:2 }}</td>
+          <td><a class="btn btn-outline" href="{% url 'compras:compra_detalle' compra.pk %}">Ver</a></td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="7" class="empty-state">No hay compras cargadas.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% include "_paginacion.html" with page_obj=compras %}
+</div>
+{% endblock %}

@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Productos — Corralón Nicola{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div><h1>Productos</h1><div class="page-subtitle">Catálogo y stock del corralón</div></div>
+  {% if permisos_modulos.stock > 1 %}<a class="btn btn-primary" href="{% url 'stock:producto_form' %}">+ Nuevo producto</a>{% endif %}
+</div>
+
+<form method="get" class="filter-bar">
+  <input type="text" name="q" placeholder="Buscar por código o nombre..." value="{{ q }}">
+  <button type="submit" class="btn-outline">Buscar</button>
+</form>
+
+<div class="card">
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead><tr><th>Código</th><th>Nombre</th><th>Categoría</th><th class="numeric">Stock</th><th class="numeric">Precio</th><th>Estado</th><th></th></tr></thead>
+      <tbody>
+        {% for producto in productos %}
+        <tr>
+          <td>{{ producto.codigo }}</td>
+          <td>{{ producto.nombre }}</td>
+          <td>{{ producto.categoria }}</td>
+          <td class="numeric">
+            {{ producto.stock_actual }} {{ producto.get_unidad_medida_display }}
+            {% if producto.bajo_stock_minimo %}<span class="badge badge-rojo">Bajo mínimo</span>{% endif %}
+          </td>
+          <td class="numeric">${{ producto.precio_venta|floatformat:2 }}</td>
+          <td>{% if producto.activo %}<span class="badge badge-verde">Activo</span>{% else %}<span class="badge badge-rojo">Inactivo</span>{% endif %}</td>
+          <td>
+            {% if permisos_modulos.stock > 1 %}
+            <a class="btn btn-outline" href="{% url 'stock:producto_form' producto.pk %}">Editar</a>
+            <form method="post" action="{% url 'stock:producto_toggle' producto.pk %}" style="display:inline;">
+              {% csrf_token %}
+              <button type="submit" class="btn-outline">{% if producto.activo %}Desactivar{% else %}Activar{% endif %}</button>
+            </form>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="7" class="empty-state">No hay productos cargados.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% include "_paginacion.html" with page_obj=productos %}
+</div>
+{% endblock %}

@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}{% if usuario %}Editar usuario{% else %}Nuevo usuario{% endif %} — Corralón Nicola{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>{% if usuario %}Editar usuario: {{ usuario.username }}{% else %}Nuevo usuario{% endif %}</h1>
+</div>
+
+<form method="post" class="card form-card">
+  {% csrf_token %}
+  {{ form.non_field_errors }}
+  <div class="grid-2">
+    <label>Usuario
+      {{ form.username }}
+      {{ form.username.errors }}
+    </label>
+    <label>Contraseña
+      {{ form.password }}
+      <small style="color:var(--texto-muted);">{{ form.password.help_text }}</small>
+      {{ form.password.errors }}
+    </label>
+    <label>Nombre
+      {{ form.first_name }}
+    </label>
+    <label>Apellido
+      {{ form.last_name }}
+    </label>
+    <label>Email
+      {{ form.email }}
+    </label>
+    <label>DNI
+      {{ form.dni }}
+    </label>
+    <label>Teléfono
+      {{ form.telefono }}
+    </label>
+  </div>
+
+  <div class="checkbox-row" style="margin-bottom:0.9rem;">{{ form.activo }} <span>Usuario activo</span></div>
+  <div class="checkbox-row" style="margin-bottom:0.9rem;">{{ form.is_staff }} <span>Acceso al admin de Django</span></div>
+  <div class="checkbox-row" style="margin-bottom:0.9rem;">{{ form.is_superuser }} <span>Administrador del sistema (acceso total)</span></div>
+
+  <label>Roles
+    {{ form.roles }}
+  </label>
+
+  <div class="actions">
+    <button type="submit" class="primary">Guardar</button>
+    <a class="btn btn-outline" href="{% url 'core:usuario_list' %}">Cancelar</a>
+  </div>
+</form>
+{% endblock %}

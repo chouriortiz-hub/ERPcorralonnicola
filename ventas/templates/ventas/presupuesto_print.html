@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Presupuesto #{{ presupuesto.pk }}{% endblock %}
+{% block content %}
+<div class="no-print actions">
+  <a href="{% url 'ventas:nuevo_pedido' %}">&larr; Nuevo pedido</a>
+  <button type="button" onclick="window.print()" class="primary">Imprimir</button>
+</div>
+<div class="card">
+  <h1>Presupuesto #{{ presupuesto.pk }}</h1>
+  <p>Fecha: {{ presupuesto.fecha|date:"d/m/Y H:i" }} — Válido por {{ presupuesto.validez_dias }} días</p>
+  <p><strong>Cliente:</strong> {{ presupuesto.cliente.nombre }}{% if presupuesto.cliente.cuit_dni %} ({{ presupuesto.cliente.cuit_dni }}){% endif %}</p>
+  {% if presupuesto.cliente.direccion %}<p><strong>Dirección:</strong> {{ presupuesto.cliente.direccion }}</p>{% endif %}
+
+  <table>
+    <thead>
+      <tr><th>Producto</th><th>Cantidad</th><th>Precio unit.</th><th>Subtotal</th></tr>
+    </thead>
+    <tbody>
+      {% for linea in presupuesto.lineas.all %}
+      <tr>
+        <td>{{ linea.producto }}</td>
+        <td>{{ linea.cantidad }}</td>
+        <td>${{ linea.precio_unitario }}</td>
+        <td>${{ linea.subtotal }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+    <tfoot>
+      <tr><td colspan="3"><strong>Total</strong></td><td><strong>${{ presupuesto.total }}</strong></td></tr>
+    </tfoot>
+  </table>
+
+  {% if presupuesto.observaciones %}<p><strong>Observaciones:</strong> {{ presupuesto.observaciones }}</p>{% endif %}
+  <p><em>Este presupuesto es una cotización estimativa: no descuenta stock ni compromete existencias.</em></p>
+</div>
+{% endblock %}

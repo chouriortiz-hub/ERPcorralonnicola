@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Nuevo reparto — Corralón Nicola{% endblock %}
+{% block content %}
+<div class="page-header"><h1>Nuevo reparto</h1></div>
+<form method="post" class="card form-card">
+  {% csrf_token %}
+  {{ form.non_field_errors }}
+  <div class="grid-2">
+    <label>Fecha {{ form.fecha }} {{ form.fecha.errors }}</label>
+    <label>Chofer {{ form.chofer }} {{ form.chofer.errors }}</label>
+    <label>Vehículo {{ form.vehiculo }} {{ form.vehiculo.errors }}</label>
+  </div>
+  <label>Observaciones {{ form.observaciones }}</label>
+  <div class="actions">
+    <button type="submit" class="primary">Crear reparto</button>
+    <a class="btn btn-outline" href="{% url 'repartos:reparto_list' %}">Cancelar</a>
+  </div>
+</form>
+{% endblock %}

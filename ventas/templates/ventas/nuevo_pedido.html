@@ -1,0 +1,315 @@
+{% extends "base.html" %}
+{% block title %}Nuevo Pedido — Corralón Nicola{% endblock %}
+{% block content %}
+<h1>Nuevo Pedido</h1>
+
+<form method="post" id="form-pedido">
+  {% csrf_token %}
+
+  <div class="card">
+    <h2>1. Productos</h2>
+    <input type="text" id="buscar-producto" placeholder="Buscar producto por nombre o código..." autocomplete="off">
+    <ul id="resultados-producto" class="resultados-lista"></ul>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Producto</th>
+          <th style="width:6.5rem">Cantidad</th>
+          <th style="width:7.5rem">Precio unit.</th>
+          <th style="width:6rem">Subtotal</th>
+          <th style="width:8rem">Sale con reparto</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="carrito-body">
+        <tr id="carrito-vacio"><td colspan="6"><em>Todavía no agregaste productos.</em></td></tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="3"><strong>Total</strong></td>
+          <td id="carrito-total"><strong>0.00</strong></td>
+          <td></td>
+          <td></td>
+        </tr>
+      </tfoot>
+    </table>
+    <p class="no-print"><small>"Sale con reparto" solo aplica si vas a facturar: esas líneas no descuentan stock ahora, quedan pendientes hasta que el reparto que las lleva marque su salida.</small></p>
+  </div>
+
+  <div class="card">
+    <h2>2. Cliente</h2>
+    <input type="text" id="buscar-cliente" placeholder="Buscar cliente existente por nombre..." autocomplete="off">
+    <ul id="resultados-cliente" class="resultados-lista"></ul>
+    <input type="hidden" name="cliente_id" id="cliente_id" value="">
+    <div class="grid-2">
+      <label>Nombre
+        <input type="text" name="cliente_nombre" id="cliente_nombre">
+      </label>
+      <label>CUIT / DNI
+        <input type="text" name="cliente_cuit_dni">
+      </label>
+      <label>Condición frente al IVA
+        <select name="cliente_condicion_iva">
+          {% for value, label in condiciones_iva %}
+          <option value="{{ value }}">{{ label }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>Dirección
+        <input type="text" name="cliente_direccion" id="cliente_direccion">
+      </label>
+      <label>Teléfono
+        <input type="text" name="cliente_telefono">
+      </label>
+      <label>Email
+        <input type="email" name="cliente_email">
+      </label>
+    </div>
+    <p class="no-print"><small>Elegí un cliente de la búsqueda, o completá estos datos para cargar uno nuevo.</small></p>
+  </div>
+
+  <div class="card">
+    <h2>3. Si vas a imprimir como Presupuesto</h2>
+    <label>Validez (días)
+      <input type="number" name="validez_dias" value="7" min="1" style="max-width:8rem">
+    </label>
+  </div>
+
+  {% if puede_facturar %}
+  <div class="card">
+    <h2>4. Si vas a Facturar</h2>
+    <div class="grid-2">
+      <label>Punto de venta
+        <select name="punto_venta_id">
+          {% for pv in puntos_venta %}
+          <option value="{{ pv.id }}">{{ pv }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>Tipo de comprobante
+        <select name="tipo_comprobante">
+          {% for value, label in tipos_comprobante %}
+          <option value="{{ value }}">{{ label }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>Domicilio de entrega
+        <input type="text" name="direccion_entrega" id="direccion_entrega">
+      </label>
+      <label>Día estimado de entrega
+        <input type="date" name="fecha_entrega_estimada">
+      </label>
+    </div>
+  </div>
+  {% else %}
+  <div class="card">
+    <p>No tenés permiso para facturar pedidos. Solo podés generar presupuestos.</p>
+  </div>
+  {% endif %}
+
+  <div class="card">
+    <label>Observaciones
+      <textarea name="observaciones" rows="2"></textarea>
+    </label>
+  </div>
+
+  <input type="hidden" name="carrito_json" id="carrito_json" value='{{ carrito_json }}'>
+
+  <div class="actions">
+    <button type="submit" name="modo" value="presupuesto">Imprimir como Presupuesto</button>
+    {% if puede_facturar %}
+    <button type="submit" name="modo" value="facturar" class="primary">Facturar Pedido</button>
+    {% endif %}
+  </div>
+</form>
+
+<script>
+(function () {
+  const carritoJsonInput = document.getElementById('carrito_json');
+  let carrito = [];
+  try {
+    carrito = JSON.parse(carritoJsonInput.value || '[]').map(function (item) {
+      return {
+        producto_id: item.producto_id,
+        codigo: item.codigo || '',
+        nombre: item.nombre || ('Producto #' + item.producto_id),
+        unidad_medida: item.unidad_medida || '',
+        descuenta_stock: item.descuenta_stock !== undefined ? item.descuenta_stock : true,
+        cantidad: item.cantidad !== undefined ? String(item.cantidad) : '1',
+        precio_unitario: item.precio_unitario !== undefined ? String(item.precio_unitario) : '0',
+        sale_con_reparto: !!item.sale_con_reparto,
+      };
+    });
+  } catch (e) {
+    carrito = [];
+  }
+
+  function renderCarrito() {
+    const tbody = document.getElementById('carrito-body');
+    tbody.innerHTML = '';
+    if (carrito.length === 0) {
+      tbody.innerHTML = '<tr id="carrito-vacio"><td colspan="6"><em>Todavía no agregaste productos.</em></td></tr>';
+      document.getElementById('carrito-total').innerHTML = '<strong>0.00</strong>';
+      return;
+    }
+    let total = 0;
+    carrito.forEach(function (item, idx) {
+      const cantidad = parseFloat(item.cantidad) || 0;
+      const precio = parseFloat(item.precio_unitario) || 0;
+      const subtotal = cantidad * precio;
+      total += subtotal;
+
+      const tr = document.createElement('tr');
+      const tdProducto = document.createElement('td');
+      tdProducto.textContent = (item.codigo ? item.codigo + ' - ' : '') + item.nombre;
+      tr.appendChild(tdProducto);
+
+      const tdCantidad = document.createElement('td');
+      const inputCantidad = document.createElement('input');
+      inputCantidad.type = 'number';
+      inputCantidad.min = '0.001';
+      inputCantidad.step = '0.001';
+      inputCantidad.value = item.cantidad;
+      inputCantidad.addEventListener('change', function () {
+        carrito[idx].cantidad = inputCantidad.value;
+        renderCarrito();
+      });
+      tdCantidad.appendChild(inputCantidad);
+      tr.appendChild(tdCantidad);
+
+      const tdPrecio = document.createElement('td');
+      const inputPrecio = document.createElement('input');
+      inputPrecio.type = 'number';
+      inputPrecio.min = '0';
+      inputPrecio.step = '0.01';
+      inputPrecio.value = item.precio_unitario;
+      inputPrecio.addEventListener('change', function () {
+        carrito[idx].precio_unitario = inputPrecio.value;
+        renderCarrito();
+      });
+      tdPrecio.appendChild(inputPrecio);
+      tr.appendChild(tdPrecio);
+
+      const tdSubtotal = document.createElement('td');
+      tdSubtotal.textContent = subtotal.toFixed(2);
+      tr.appendChild(tdSubtotal);
+
+      const tdReparto = document.createElement('td');
+      const checkboxReparto = document.createElement('input');
+      checkboxReparto.type = 'checkbox';
+      checkboxReparto.checked = item.sale_con_reparto;
+      if (!item.descuenta_stock) {
+        checkboxReparto.disabled = true;
+        checkboxReparto.title = 'Este producto no controla stock';
+      }
+      checkboxReparto.addEventListener('change', function () {
+        carrito[idx].sale_con_reparto = checkboxReparto.checked;
+      });
+      tdReparto.appendChild(checkboxReparto);
+      tr.appendChild(tdReparto);
+
+      const tdQuitar = document.createElement('td');
+      const btnQuitar = document.createElement('button');
+      btnQuitar.type = 'button';
+      btnQuitar.textContent = 'Quitar';
+      btnQuitar.addEventListener('click', function () {
+        carrito.splice(idx, 1);
+        renderCarrito();
+      });
+      tdQuitar.appendChild(btnQuitar);
+      tr.appendChild(tdQuitar);
+
+      tbody.appendChild(tr);
+    });
+    document.getElementById('carrito-total').innerHTML = '<strong>' + total.toFixed(2) + '</strong>';
+  }
+
+  let buscarProductoTimeout;
+  document.getElementById('buscar-producto').addEventListener('input', function (e) {
+    clearTimeout(buscarProductoTimeout);
+    const q = e.target.value.trim();
+    const ul = document.getElementById('resultados-producto');
+    if (!q) { ul.innerHTML = ''; return; }
+    buscarProductoTimeout = setTimeout(function () {
+      fetch('{% url "ventas:buscar_productos" %}?q=' + encodeURIComponent(q))
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          ul.innerHTML = '';
+          (data.resultados || []).forEach(function (p) {
+            const li = document.createElement('li');
+            const span = document.createElement('span');
+            span.textContent = p.codigo + ' - ' + p.nombre + ' — Stock: ' + p.stock_actual + ' ' + p.unidad_medida + ' — $' + p.precio_venta;
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.textContent = 'Agregar';
+            btn.addEventListener('click', function () {
+              carrito.push({
+                producto_id: p.id, codigo: p.codigo, nombre: p.nombre,
+                unidad_medida: p.unidad_medida, descuenta_stock: p.descuenta_stock,
+                cantidad: '1', precio_unitario: p.precio_venta, sale_con_reparto: false,
+              });
+              renderCarrito();
+              document.getElementById('buscar-producto').value = '';
+              ul.innerHTML = '';
+            });
+            li.appendChild(span);
+            li.appendChild(btn);
+            ul.appendChild(li);
+          });
+        });
+    }, 250);
+  });
+
+  let buscarClienteTimeout;
+  document.getElementById('buscar-cliente').addEventListener('input', function (e) {
+    clearTimeout(buscarClienteTimeout);
+    const q = e.target.value.trim();
+    const ul = document.getElementById('resultados-cliente');
+    if (!q) { ul.innerHTML = ''; return; }
+    buscarClienteTimeout = setTimeout(function () {
+      fetch('{% url "ventas:buscar_clientes" %}?q=' + encodeURIComponent(q))
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          ul.innerHTML = '';
+          (data.resultados || []).forEach(function (c) {
+            const li = document.createElement('li');
+            const span = document.createElement('span');
+            span.textContent = c.nombre + (c.cuit_dni ? ' (' + c.cuit_dni + ')' : '');
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.textContent = 'Elegir';
+            btn.addEventListener('click', function () {
+              document.getElementById('cliente_id').value = c.id;
+              document.getElementById('cliente_nombre').value = c.nombre;
+              document.getElementById('cliente_direccion').value = c.direccion || '';
+              const direccionEntrega = document.getElementById('direccion_entrega');
+              if (direccionEntrega) { direccionEntrega.value = c.direccion || ''; }
+              document.getElementById('buscar-cliente').value = c.nombre;
+              ul.innerHTML = '';
+            });
+            li.appendChild(span);
+            li.appendChild(btn);
+            ul.appendChild(li);
+          });
+        });
+    }, 250);
+  });
+
+  document.getElementById('cliente_nombre').addEventListener('input', function () {
+    document.getElementById('cliente_id').value = '';
+  });
+
+  document.getElementById('form-pedido').addEventListener('submit', function (e) {
+    if (carrito.length === 0) {
+      e.preventDefault();
+      alert('Agregá al menos un producto al carrito antes de continuar.');
+      return;
+    }
+    carritoJsonInput.value = JSON.stringify(carrito);
+  });
+
+  renderCarrito();
+})();
+</script>
+{% endblock %}

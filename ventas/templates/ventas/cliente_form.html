@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}{% if cliente %}Editar cliente{% else %}Nuevo cliente{% endif %} — Corralón Nicola{% endblock %}
+{% block content %}
+<div class="page-header"><h1>{% if cliente %}Editar cliente: {{ cliente.nombre }}{% else %}Nuevo cliente{% endif %}</h1></div>
+<form method="post" class="card form-card">
+  {% csrf_token %}
+  {{ form.non_field_errors }}
+  <div class="grid-2">
+    <label>Nombre {{ form.nombre }} {{ form.nombre.errors }}</label>
+    <label>CUIT / DNI {{ form.cuit_dni }}</label>
+    <label>Condición frente al IVA {{ form.condicion_iva }}</label>
+    <label>Teléfono {{ form.telefono }}</label>
+    <label>Email {{ form.email }}</label>
+  </div>
+  <label>Dirección {{ form.direccion }}</label>
+  <div class="checkbox-row" style="margin-bottom:0.9rem;">{{ form.activo }} <span>Cliente activo</span></div>
+  <div class="actions">
+    <button type="submit" class="primary">Guardar</button>
+    <a class="btn btn-outline" href="{% url 'ventas:cliente_list' %}">Cancelar</a>
+  </div>
+</form>
+{% endblock %}

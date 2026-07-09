@@ -1,0 +1,11 @@
+{% extends "admin/index.html" %}
+
+{% block content %}
+<div style="margin-bottom: 1rem;">
+  <a href="{% url 'ventas:nuevo_pedido' %}"
+     style="display:inline-block; padding:0.6rem 1.1rem; background:#417690; color:#fff; border-radius:4px; text-decoration:none; font-weight:600;">
+    + Nuevo Pedido
+  </a>
+</div>
+{{ block.super }}
+{% endblock %}

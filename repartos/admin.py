@@ -18,6 +18,15 @@ class RepartoAdmin(admin.ModelAdmin):
     list_display = ('id', 'fecha', 'chofer', 'vehiculo', 'estado')
     list_filter = ('estado', 'fecha')
     inlines = [RepartoPedidoInline]
+    actions = ['marcar_salida_action']
+
+    def marcar_salida_action(self, request, queryset):
+        for reparto in queryset:
+            try:
+                reparto.marcar_salida(usuario=request.user)
+            except Exception as e:
+                self.message_user(request, f'Reparto #{reparto.id}: {e}', level=messages.ERROR)
+    marcar_salida_action.short_description = 'Marcar salida a reparto (descuenta stock pendiente)'
 
 
 @admin.register(RepartoPedido)

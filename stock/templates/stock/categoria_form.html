@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}{% if categoria %}Editar categoría{% else %}Nueva categoría{% endif %} — Corralón Nicola{% endblock %}
+{% block content %}
+<div class="page-header"><h1>{% if categoria %}Editar categoría{% else %}Nueva categoría{% endif %}</h1></div>
+<form method="post" class="card form-card">
+  {% csrf_token %}
+  {{ form.non_field_errors }}
+  <label>Nombre {{ form.nombre }} {{ form.nombre.errors }}</label>
+  <div class="actions">
+    <button type="submit" class="primary">Guardar</button>
+    <a class="btn btn-outline" href="{% url 'stock:categoria_list' %}">Cancelar</a>
+  </div>
+</form>
+{% endblock %}

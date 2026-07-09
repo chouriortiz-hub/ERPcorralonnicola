@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Pedido #{{ pedido.pk }} — Corralón Nicola{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div><h1>Pedido #{{ pedido.pk }}</h1><div class="page-subtitle">{{ pedido.cliente }} — {{ pedido.fecha|date:"d/m/Y H:i" }}</div></div>
+  {% if pedido.estado == 'PENDIENTE' and permisos_modulos.ventas > 1 %}
+  <form method="post">
+    {% csrf_token %}
+    <input type="hidden" name="accion" value="confirmar">
+    <button type="submit" class="primary">Confirmar pedido</button>
+  </form>
+  {% endif %}
+</div>
+
+<div class="card">
+  <p><strong>Estado:</strong> <span class="badge badge-naranja">{{ pedido.get_estado_display }}</span> &nbsp; <strong>Entrega:</strong> {{ pedido.get_tipo_entrega_display }}</p>
+  <p><strong>Vendedor:</strong> {{ pedido.vendedor }}</p>
+  {% if pedido.direccion_entrega %}<p><strong>Dirección de entrega:</strong> {{ pedido.direccion_entrega }}</p>{% endif %}
+  {% if pedido.observaciones %}<p><strong>Observaciones:</strong> {{ pedido.observaciones }}</p>{% endif %}
+  {% if pedido.factura %}<p><strong>Factura:</strong> <a href="{% url 'facturacion:factura_detalle' pedido.factura.pk %}">{{ pedido.factura }}</a></p>{% endif %}
+  {% if pedido.reparto_asignado %}<p><strong>Reparto:</strong> <a href="{% url 'repartos:reparto_detalle' pedido.reparto_asignado.reparto.pk %}">{{ pedido.reparto_asignado.reparto }}</a></p>{% endif %}
+
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead><tr><th>Producto</th><th class="numeric">Cantidad</th><th class="numeric">Precio unit.</th><th class="numeric">Subtotal</th><th>Reparto</th><th>Stock desc.</th></tr></thead>
+      <tbody>
+        {% for linea in pedido.lineas.all %}
+        <tr>
+          <td>{{ linea.producto }}</td>
+          <td class="numeric">{{ linea.cantidad }}</td>
+          <td class="numeric">${{ linea.precio_unitario|floatformat:2 }}</td>
+          <td class="numeric">${{ linea.subtotal|floatformat:2 }}</td>
+          <td>{% if linea.sale_con_reparto %}Sí{% else %}—{% endif %}</td>
+          <td>{% if linea.stock_descontado %}<span class="badge badge-verde">Sí</span>{% else %}<span class="badge badge-gris">No</span>{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot><tr><td colspan="3"><strong>Total</strong></td><td class="numeric"><strong>${{ pedido.total|floatformat:2 }}</strong></td><td></td><td></td></tr></tfoot>
+    </table>
+  </div>
+</div>
+{% endblock %}

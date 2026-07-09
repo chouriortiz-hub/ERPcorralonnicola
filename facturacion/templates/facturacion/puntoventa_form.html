@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}{% if punto_venta %}Editar punto de venta{% else %}Nuevo punto de venta{% endif %} — Corralón Nicola{% endblock %}
+{% block content %}
+<div class="page-header"><h1>{% if punto_venta %}Editar punto de venta{% else %}Nuevo punto de venta{% endif %}</h1></div>
+<form method="post" class="card form-card">
+  {% csrf_token %}
+  {{ form.non_field_errors }}
+  <label>Número {{ form.numero }} {{ form.numero.errors }}</label>
+  <label>Nombre {{ form.nombre }}</label>
+  <div class="actions">
+    <button type="submit" class="primary">Guardar</button>
+    <a class="btn btn-outline" href="{% url 'facturacion:puntoventa_list' %}">Cancelar</a>
+  </div>
+</form>
+{% endblock %}

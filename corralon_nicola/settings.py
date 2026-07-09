@@ -71,13 +71,14 @@ ROOT_URLCONF = 'corralon_nicola.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [BASE_DIR / 'templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'core.context_processors.permisos',
             ],
         },
     },
@@ -157,7 +158,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # Modelo de usuario propio (core.User)
 AUTH_USER_MODEL = 'core.User'
 
-LOGIN_URL = '/admin/login/'
+LOGIN_URL = '/login/'
 LOGIN_REDIRECT_URL = '/'
 
 

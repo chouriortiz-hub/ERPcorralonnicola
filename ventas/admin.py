@@ -33,11 +33,13 @@ class PresupuestoAdmin(admin.ModelAdmin):
 class PedidoLineaInline(admin.TabularInline):
     model = PedidoLinea
     extra = 1
+    fields = ('producto', 'cantidad', 'precio_unitario', 'sale_con_reparto', 'stock_descontado')
+    readonly_fields = ('stock_descontado',)
 
 
 @admin.register(Pedido)
 class PedidoAdmin(admin.ModelAdmin):
-    list_display = ('id', 'cliente', 'vendedor', 'fecha', 'estado', 'tipo_entrega', 'total')
+    list_display = ('id', 'cliente', 'vendedor', 'fecha', 'estado', 'tipo_entrega', 'fecha_entrega_estimada', 'total')
     list_filter = ('estado', 'tipo_entrega')
     inlines = [PedidoLineaInline]
     actions = ['confirmar_pedidos']

@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Usuarios — Corralón Nicola{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div><h1>Usuarios</h1><div class="page-subtitle">Altas, bajas y roles del sistema</div></div>
+  <a class="btn btn-primary" href="{% url 'core:usuario_form' %}">+ Nuevo usuario</a>
+</div>
+
+<form method="get" class="filter-bar">
+  <input type="text" name="q" placeholder="Buscar por usuario o nombre..." value="{{ q }}">
+  <button type="submit" class="btn-outline">Buscar</button>
+</form>
+
+<div class="card">
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead><tr><th>Usuario</th><th>Nombre</th><th>Email</th><th>Roles</th><th>Estado</th><th></th></tr></thead>
+      <tbody>
+        {% for usuario in usuarios %}
+        <tr>
+          <td>{{ usuario.username }}</td>
+          <td>{{ usuario.get_full_name|default:"—" }}</td>
+          <td>{{ usuario.email|default:"—" }}</td>
+          <td>{% for ur in usuario.roles.all %}<span class="badge badge-gris">{{ ur.role.name }}</span> {% empty %}—{% endfor %}</td>
+          <td>{% if usuario.activo %}<span class="badge badge-verde">Activo</span>{% else %}<span class="badge badge-rojo">Inactivo</span>{% endif %}</td>
+          <td>
+            <a class="btn btn-outline" href="{% url 'core:usuario_form' usuario.pk %}">Editar</a>
+            <form method="post" action="{% url 'core:usuario_toggle' usuario.pk %}" style="display:inline;">
+              {% csrf_token %}
+              <button type="submit" class="btn-outline">{% if usuario.activo %}Desactivar{% else %}Activar{% endif %}</button>
+            </form>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6" class="empty-state">No se encontraron usuarios.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% include "_paginacion.html" with page_obj=usuarios %}
+</div>
+{% endblock %}

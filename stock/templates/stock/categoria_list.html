@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Categorías — Corralón Nicola{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div><h1>Categorías</h1><div class="page-subtitle">Clasificación de productos</div></div>
+  {% if permisos_modulos.stock > 1 %}<a class="btn btn-primary" href="{% url 'stock:categoria_form' %}">+ Nueva categoría</a>{% endif %}
+</div>
+
+<form method="get" class="filter-bar">
+  <input type="text" name="q" placeholder="Buscar categoría..." value="{{ q }}">
+  <button type="submit" class="btn-outline">Buscar</button>
+</form>
+
+<div class="card">
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead><tr><th>Nombre</th><th>Productos</th><th></th></tr></thead>
+      <tbody>
+        {% for categoria in categorias %}
+        <tr>
+          <td>{{ categoria.nombre }}</td>
+          <td>{{ categoria.productos.count }}</td>
+          <td>{% if permisos_modulos.stock > 1 %}<a class="btn btn-outline" href="{% url 'stock:categoria_form' categoria.pk %}">Editar</a>{% endif %}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="3" class="empty-state">No hay categorías cargadas.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% include "_paginacion.html" with page_obj=categorias %}
+</div>
+{% endblock %}

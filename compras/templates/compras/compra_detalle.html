@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Compra #{{ compra.pk }} — Corralón Nicola{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div><h1>Compra #{{ compra.pk }}</h1><div class="page-subtitle">{{ compra.proveedor }} — {{ compra.fecha|date:"d/m/Y" }}</div></div>
+  {% if compra.estado == 'BORRADOR' and permisos_modulos.compras > 1 %}
+  <form method="post">
+    {% csrf_token %}
+    <input type="hidden" name="accion" value="confirmar">
+    <button type="submit" class="primary">Confirmar compra (impacta stock y PMP)</button>
+  </form>
+  {% endif %}
+</div>
+
+<div class="card">
+  <p><strong>Estado:</strong> <span class="badge badge-naranja">{{ compra.get_estado_display }}</span></p>
+  <p><strong>Nº comprobante:</strong> {{ compra.numero_comprobante|default:"—" }} &nbsp; <strong>Cargada por:</strong> {{ compra.usuario }}</p>
+  {% if compra.observaciones %}<p><strong>Observaciones:</strong> {{ compra.observaciones }}</p>{% endif %}
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead><tr><th>Producto</th><th class="numeric">Cantidad</th><th class="numeric">Precio unit.</th><th class="numeric">Subtotal</th></tr></thead>
+      <tbody>
+        {% for linea in compra.lineas.all %}
+        <tr>
+          <td>{{ linea.producto }}</td>
+          <td class="numeric">{{ linea.cantidad }}</td>
+          <td class="numeric">${{ linea.precio_unitario|floatformat:2 }}</td>
+          <td class="numeric">${{ linea.subtotal|floatformat:2 }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot><tr><td colspan="3"><strong>Total</strong></td><td class="numeric"><strong>${{ compra.total|floatformat:2 }}</strong></td></tr></tfoot>
+    </table>
+  </div>
+</div>
+{% endblock %}

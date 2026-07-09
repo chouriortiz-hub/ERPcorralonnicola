@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}{% if producto %}Editar producto{% else %}Nuevo producto{% endif %} — Corralón Nicola{% endblock %}
+{% block content %}
+<div class="page-header"><h1>{% if producto %}Editar producto: {{ producto.codigo }}{% else %}Nuevo producto{% endif %}</h1></div>
+<form method="post" class="card form-card">
+  {% csrf_token %}
+  {{ form.non_field_errors }}
+  <div class="grid-2">
+    <label>Código {{ form.codigo }} {{ form.codigo.errors }}</label>
+    <label>Nombre {{ form.nombre }} {{ form.nombre.errors }}</label>
+    <label>Categoría {{ form.categoria }}</label>
+    <label>Proveedor habitual {{ form.proveedor_habitual }}</label>
+    <label>Unidad de medida {{ form.unidad_medida }}</label>
+    <label>Stock mínimo {{ form.stock_minimo }}</label>
+    <label>Precio de venta {{ form.precio_venta }}</label>
+  </div>
+  {% if producto %}
+  <p class="page-subtitle">Stock actual: {{ producto.stock_actual }} {{ producto.get_unidad_medida_display }} / PMP: ${{ producto.pmp|floatformat:2 }} — se actualizan solo a través de compras, pedidos o ajustes de stock.</p>
+  {% endif %}
+  <div class="checkbox-row" style="margin-bottom:0.9rem;">{{ form.descuenta_stock }} <span>Descuenta stock automáticamente</span></div>
+  <div class="checkbox-row" style="margin-bottom:0.9rem;">{{ form.activo }} <span>Producto activo</span></div>
+  <div class="actions">
+    <button type="submit" class="primary">Guardar</button>
+    <a class="btn btn-outline" href="{% url 'stock:producto_list' %}">Cancelar</a>
+  </div>
+</form>
+{% endblock %}

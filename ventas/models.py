@@ -6,13 +6,18 @@ Lo usan los vendedores de mostrador para:
   - Convertir un presupuesto en PEDIDO, o cargar un pedido directo.
   - Confirmar el PEDIDO: acá es donde, línea por línea, se descuenta stock
     SOLO si `producto.descuenta_stock` es True (pedido explícito del
-    usuario). El resto de las líneas quedan registradas igual (para poder
-    facturarlas) pero sin tocar inventario.
+    usuario) Y la línea se retira en el momento (`sale_con_reparto=False`).
+    Las líneas que salen con reparto quedan registradas igual (para poder
+    facturarlas) pero sin tocar inventario todavía: su stock se descuenta
+    recién cuando el reparto que las lleva marca su salida del depósito
+    (ver `repartos.models.Reparto.marcar_salida`).
 
 Interconexión:
-  - ventas -> stock: al confirmar el pedido (registrar_movimiento).
+  - ventas -> stock: al confirmar el pedido (registrar_movimiento), solo
+    para las líneas que se retiran en el momento.
   - ventas -> facturacion: un pedido confirmado puede facturarse.
-  - ventas -> repartos: un pedido puede asignarse a un reparto del día.
+  - ventas -> repartos: un pedido con líneas `sale_con_reparto=True`
+    pendientes puede asignarse a un reparto del día.
 """
 from django.core.exceptions import ValidationError
 from django.db import models, transaction
@@ -135,6 +140,10 @@ class Pedido(models.Model):
     estado = models.CharField(max_length=12, choices=ESTADO_CHOICES, default=PENDIENTE)
     tipo_entrega = models.CharField(max_length=10, choices=TIPO_ENTREGA_CHOICES, default=ENTREGA_MOSTRADOR)
     direccion_entrega = models.CharField(max_length=250, blank=True)
+    fecha_entrega_estimada = models.DateField(
+        null=True, blank=True,
+        help_text='Día estimado de entrega para las líneas que salen con reparto.',
+    )
     observaciones = models.TextField(blank=True)
 
     class Meta:
@@ -147,12 +156,38 @@ class Pedido(models.Model):
     def total(self):
         return sum((l.subtotal for l in self.lineas.all()), start=0)
 
+    @property
+    def tiene_lineas_pendientes_reparto(self):
+        """
+        True si el pedido tiene líneas marcadas para salir con reparto cuyo
+        stock todavía no se descontó (recién se descuenta cuando el reparto
+        que las lleva marca su salida del depósito, ver Reparto.marcar_salida).
+        """
+        return self.lineas.filter(
+            sale_con_reparto=True, stock_descontado=False, producto__descuenta_stock=True,
+        ).exists()
+
+    def actualizar_tipo_entrega(self):
+        """
+        Infiere tipo_entrega a partir de las líneas cargadas: si al menos una
+        línea sale con reparto, todo el pedido se gestiona como entrega a
+        domicilio (define a qué Repartos puede asignarse), aunque el resto
+        de las líneas se retiren por mostrador en el momento.
+        """
+        tiene_reparto = self.lineas.filter(sale_con_reparto=True).exists()
+        nuevo_tipo = self.ENTREGA_REPARTO if tiene_reparto else self.ENTREGA_MOSTRADOR
+        if nuevo_tipo != self.tipo_entrega:
+            self.tipo_entrega = nuevo_tipo
+            self.save(update_fields=['tipo_entrega'])
+
     @transaction.atomic
     def confirmar(self, usuario):
         """
         Descuenta stock SOLO de las líneas cuyo producto tiene
-        descuenta_stock=True. El resto queda facturable pero no
-        controlado por inventario (ej: flete, mano de obra, encargues).
+        descuenta_stock=True Y que se retiran en el momento (sale_con_reparto
+        es False). Las líneas que salen con reparto quedan facturables pero
+        pendientes: su stock se descuenta recién cuando el reparto que las
+        lleva marca su salida del depósito (Reparto.marcar_salida), no acá.
         """
         if self.estado != self.PENDIENTE:
             raise ValidationError('Solo se pueden confirmar pedidos en estado Pendiente.')
@@ -162,7 +197,7 @@ class Pedido(models.Model):
             raise ValidationError('El pedido no tiene líneas cargadas.')
 
         for linea in lineas:
-            if linea.producto.descuenta_stock:
+            if linea.producto.descuenta_stock and not linea.sale_con_reparto:
                 registrar_movimiento(
                     producto=linea.producto,
                     cantidad=linea.cantidad,
@@ -172,6 +207,8 @@ class Pedido(models.Model):
                     referencia_id=self.pk,
                     motivo=f'Pedido #{self.pk} - {self.cliente}',
                 )
+                linea.stock_descontado = True
+                linea.save(update_fields=['stock_descontado'])
 
         self.estado = self.CONFIRMADO
         self.save(update_fields=['estado'])
@@ -183,6 +220,14 @@ class PedidoLinea(models.Model):
     producto = models.ForeignKey(Producto, on_delete=models.PROTECT, related_name='lineas_pedido')
     cantidad = models.DecimalField(max_digits=14, decimal_places=3)
     precio_unitario = models.DecimalField(max_digits=14, decimal_places=2)
+    sale_con_reparto = models.BooleanField(
+        default=False,
+        help_text='Si está activo, esta línea no se retira por mostrador: sale con el reparto y su stock se descuenta recién cuando el reparto marca su salida.',
+    )
+    stock_descontado = models.BooleanField(
+        default=False,
+        help_text='Gestionado por el sistema: indica si esta línea ya impactó el stock (al confirmar el pedido, o al salir el reparto).',
+    )
 
     @property
     def subtotal(self):

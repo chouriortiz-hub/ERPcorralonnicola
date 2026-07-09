@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}{% if role %}Editar rol{% else %}Nuevo rol{% endif %} — Corralón Nicola{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>{% if role %}Editar rol: {{ role.name }}{% else %}Nuevo rol{% endif %}</h1>
+</div>
+
+<form method="post" class="card form-card">
+  {% csrf_token %}
+  {{ form.non_field_errors }}
+  <label>Nombre del rol
+    {{ form.name }}
+    {{ form.name.errors }}
+  </label>
+  <div class="grid-2">
+    <label>Stock
+      {{ form.stock_perm }}
+    </label>
+    <label>Ventas
+      {{ form.ventas_perm }}
+    </label>
+    <label>Compras
+      {{ form.compras_perm }}
+    </label>
+    <label>Facturación
+      {{ form.facturacion_perm }}
+    </label>
+    <label>Repartos
+      {{ form.repartos_perm }}
+    </label>
+    <label>Finanzas
+      {{ form.finanzas_perm }}
+    </label>
+  </div>
+  <div class="actions">
+    <button type="submit" class="primary">Guardar</button>
+    <a class="btn btn-outline" href="{% url 'core:role_list' %}">Cancelar</a>
+  </div>
+</form>
+{% endblock %}

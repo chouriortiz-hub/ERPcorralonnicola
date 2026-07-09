@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Facturas — Corralón Nicola{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div><h1>Facturas</h1><div class="page-subtitle">Comprobantes emitidos</div></div>
+</div>
+
+<form method="get" class="filter-bar">
+  <select name="estado">
+    <option value="">Todos los estados</option>
+    {% for value, label in estados %}
+    <option value="{{ value }}" {% if value == estado %}selected{% endif %}>{{ label }}</option>
+    {% endfor %}
+  </select>
+  <button type="submit" class="btn-outline">Filtrar</button>
+</form>
+
+<div class="card">
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead><tr><th>Comprobante</th><th>Cliente</th><th>Fecha</th><th>Estado</th><th class="numeric">Total</th><th></th></tr></thead>
+      <tbody>
+        {% for factura in facturas %}
+        <tr>
+          <td>{{ factura }}</td>
+          <td>{{ factura.cliente }}</td>
+          <td>{{ factura.fecha|date:"d/m/Y" }}</td>
+          <td>
+            {% if factura.estado == 'AUTORIZADA' %}<span class="badge badge-verde">{{ factura.get_estado_display }}</span>
+            {% elif factura.estado == 'RECHAZADA' or factura.estado == 'ANULADA' %}<span class="badge badge-rojo">{{ factura.get_estado_display }}</span>
+            {% else %}<span class="badge badge-naranja">{{ factura.get_estado_display }}</span>{% endif %}
+          </td>
+          <td class="numeric">${{ factura.total|floatformat:2 }}</td>
+          <td>
+            <a class="btn btn-outline" href="{% url 'facturacion:factura_detalle' factura.pk %}">Ver</a>
+            <a class="btn btn-outline" href="{% url 'facturacion:factura_imprimir' factura.pk %}">Imprimir</a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6" class="empty-state">No hay facturas emitidas.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% include "_paginacion.html" with page_obj=facturas %}
+</div>
+{% endblock %}

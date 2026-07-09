@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — Corralón Nicola{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1>Dashboard</h1>
+    <div class="page-subtitle">Resumen general del corralón</div>
+  </div>
+</div>
+
+<div class="stat-grid">
+  {% if permisos_modulos.ventas > 0 %}
+  <div class="stat-card accent">
+    <div class="stat-label">Pedidos pendientes</div>
+    <div class="stat-value">{{ pedidos_pendientes }}</div>
+    <div class="stat-hint">Por confirmar</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Pedidos este mes</div>
+    <div class="stat-value">{{ pedidos_mes }}</div>
+  </div>
+  {% endif %}
+  {% if permisos_modulos.facturacion > 0 %}
+  <div class="stat-card">
+    <div class="stat-label">Facturado este mes</div>
+    <div class="stat-value">${{ total_facturado_mes|floatformat:2 }}</div>
+  </div>
+  {% endif %}
+  {% if permisos_modulos.stock > 0 %}
+  <div class="stat-card{% if productos_bajo_stock > 0 %} accent{% endif %}">
+    <div class="stat-label">Productos bajo stock mínimo</div>
+    <div class="stat-value">{{ productos_bajo_stock }}</div>
+    <div class="stat-hint">de {{ productos_activos }} productos activos</div>
+  </div>
+  {% endif %}
+  {% if permisos_modulos.compras > 0 %}
+  <div class="stat-card">
+    <div class="stat-label">Compras confirmadas (mes)</div>
+    <div class="stat-value">{{ compras_mes }}</div>
+  </div>
+  {% endif %}
+  {% if permisos_modulos.repartos > 0 %}
+  <div class="stat-card">
+    <div class="stat-label">Repartos de hoy</div>
+    <div class="stat-value">{{ repartos_hoy }}</div>
+  </div>
+  {% endif %}
+</div>
+
+<div class="grid-2" style="gap:1.25rem;">
+  {% if permisos_modulos.ventas > 0 %}
+  <div class="card">
+    <h2>Últimos pedidos</h2>
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead><tr><th>#</th><th>Cliente</th><th>Estado</th><th class="numeric">Total</th></tr></thead>
+        <tbody>
+          {% for pedido in ultimos_pedidos %}
+          <tr>
+            <td><a href="{% url 'ventas:pedido_detalle' pedido.pk %}">#{{ pedido.pk }}</a></td>
+            <td>{{ pedido.cliente }}</td>
+            <td><span class="badge badge-naranja">{{ pedido.get_estado_display }}</span></td>
+            <td class="numeric">${{ pedido.total|floatformat:2 }}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="4" class="empty-state">Todavía no hay pedidos.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+
+  {% if permisos_modulos.facturacion > 0 %}
+  <div class="card">
+    <h2>Últimas facturas</h2>
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead><tr><th>Comprobante</th><th>Cliente</th><th>Estado</th><th class="numeric">Total</th></tr></thead>
+        <tbody>
+          {% for factura in ultimas_facturas %}
+          <tr>
+            <td><a href="{% url 'facturacion:factura_detalle' factura.pk %}">{{ factura }}</a></td>
+            <td>{{ factura.cliente }}</td>
+            <td><span class="badge badge-naranja">{{ factura.get_estado_display }}</span></td>
+            <td class="numeric">${{ factura.total|floatformat:2 }}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="4" class="empty-state">Todavía no hay facturas.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

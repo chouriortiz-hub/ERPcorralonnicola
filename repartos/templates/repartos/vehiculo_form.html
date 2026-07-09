@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}{% if vehiculo %}Editar vehículo{% else %}Nuevo vehículo{% endif %} — Corralón Nicola{% endblock %}
+{% block content %}
+<div class="page-header"><h1>{% if vehiculo %}Editar vehículo{% else %}Nuevo vehículo{% endif %}</h1></div>
+<form method="post" class="card form-card">
+  {% csrf_token %}
+  {{ form.non_field_errors }}
+  <label>Patente {{ form.patente }} {{ form.patente.errors }}</label>
+  <label>Descripción {{ form.descripcion }}</label>
+  <div class="checkbox-row" style="margin-bottom:0.9rem;">{{ form.activo }} <span>Vehículo activo</span></div>
+  <div class="actions">
+    <button type="submit" class="primary">Guardar</button>
+    <a class="btn btn-outline" href="{% url 'repartos:vehiculo_list' %}">Cancelar</a>
+  </div>
+</form>
+{% endblock %}

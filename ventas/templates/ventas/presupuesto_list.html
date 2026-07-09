@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Presupuestos — Corralón Nicola{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div><h1>Presupuestos</h1><div class="page-subtitle">Cotizaciones emitidas</div></div>
+  {% if permisos_modulos.ventas > 1 %}<a class="btn btn-primary" href="{% url 'ventas:nuevo_pedido' %}">+ Nuevo pedido</a>{% endif %}
+</div>
+
+<form method="get" class="filter-bar">
+  <select name="estado">
+    <option value="">Todos los estados</option>
+    {% for value, label in estados %}
+    <option value="{{ value }}" {% if value == estado %}selected{% endif %}>{{ label }}</option>
+    {% endfor %}
+  </select>
+  <button type="submit" class="btn-outline">Filtrar</button>
+</form>
+
+<div class="card">
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead><tr><th>#</th><th>Cliente</th><th>Vendedor</th><th>Fecha</th><th>Estado</th><th class="numeric">Total</th><th></th></tr></thead>
+      <tbody>
+        {% for p in presupuestos %}
+        <tr>
+          <td>#{{ p.pk }}</td>
+          <td>{{ p.cliente }}</td>
+          <td>{{ p.vendedor }}</td>
+          <td>{{ p.fecha|date:"d/m/Y" }}</td>
+          <td>
+            {% if p.estado == 'CONVERTIDO' %}<span class="badge badge-verde">{{ p.get_estado_display }}</span>
+            {% elif p.estado == 'VENCIDO' %}<span class="badge badge-rojo">{{ p.get_estado_display }}</span>
+            {% else %}<span class="badge badge-naranja">{{ p.get_estado_display }}</span>{% endif %}
+          </td>
+          <td class="numeric">${{ p.total|floatformat:2 }}</td>
+          <td>
+            <a class="btn btn-outline" href="{% url 'ventas:presupuesto_detalle' p.pk %}">Ver</a>
+            <a class="btn btn-outline" href="{% url 'ventas:presupuesto_imprimir' p.pk %}">Imprimir</a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="7" class="empty-state">No hay presupuestos cargados.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% include "_paginacion.html" with page_obj=presupuestos %}
+</div>
+{% endblock %}

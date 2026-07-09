@@ -1,28 +1,25 @@
 """
 URL configuration for corralon_nicola project.
 
-The `urlpatterns` list routes URLs to views. For more information please see:
-    https://docs.djangoproject.com/en/6.0/topics/http/urls/
-Examples:
-Function views
-    1. Add an import:  from my_app import views
-    2. Add a URL to urlpatterns:  path('', views.home, name='home')
-Class-based views
-    1. Add an import:  from other_app.views import Home
-    2. Add a URL to urlpatterns:  path('', Home.as_view(), name='home')
-Including another URLconf
-    1. Import the include() function: from django.urls import include, path
-    2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
+El frontend a medida (`core`, `stock`, `ventas`, `compras`, `facturacion`,
+`repartos`, `finanzas`) es la interfaz principal del sistema. El admin de
+Django queda montado en `/admin/` solo como respaldo técnico, sin enlaces
+desde la interfaz nueva.
 """
 from django.contrib import admin
-from django.shortcuts import redirect
-from django.urls import path
+from django.urls import include, path
 
 admin.site.site_header = 'Corralón Nicola — Sistema de Gestión'
 admin.site.site_title = 'Corralón Nicola ERP'
 admin.site.index_title = 'Panel de gestión'
 
 urlpatterns = [
-    path('', lambda request: redirect('admin:index')),
     path('admin/', admin.site.urls),
+    path('', include('core.urls')),
+    path('stock/', include('stock.urls')),
+    path('ventas/', include('ventas.urls')),
+    path('compras/', include('compras.urls')),
+    path('facturacion/', include('facturacion.urls')),
+    path('repartos/', include('repartos.urls')),
+    path('finanzas/', include('finanzas.urls')),
 ]

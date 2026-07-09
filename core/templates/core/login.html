@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Ingresar — Corralón Nicola{% endblock %}
+{% block extra_head %}
+<style>
+  body.login-body { background: var(--negro); }
+  .login-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 1.5rem; }
+  .login-card { background: #fff; border-radius: 14px; padding: 2.25rem 2rem; width: 100%; max-width: 380px; box-shadow: 0 12px 40px rgba(0,0,0,0.35); }
+  .login-logo { display: flex; flex-direction: column; align-items: center; gap: 0.6rem; margin-bottom: 1.75rem; }
+  .login-logo .logo-mark { width: 52px; height: 52px; border-radius: 12px; background: var(--naranja); color: var(--negro); font-weight: 800; font-size: 1.4rem; display: flex; align-items: center; justify-content: center; }
+  .login-logo strong { font-size: 1.05rem; letter-spacing: 0.02em; }
+  .login-logo span { color: var(--texto-muted); font-size: 0.78rem; }
+  .login-card button.primary { width: 100%; justify-content: center; margin-top: 0.5rem; padding: 0.65rem; }
+</style>
+{% endblock %}
+{% block content_publico %}
+<script>document.body.classList.add('login-body');</script>
+<div class="login-wrap">
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="logo-mark">CN</div>
+      <strong>CORRALÓN NICOLA</strong>
+      <span>Sistema de gestión</span>
+    </div>
+    <form method="post">
+      {% csrf_token %}
+      <label>Usuario
+        {{ form.username }}
+      </label>
+      <label>Contraseña
+        {{ form.password }}
+      </label>
+      {% if form.errors %}
+      <p style="color:#92140c;font-size:0.85rem;">Usuario o contraseña incorrectos.</p>
+      {% endif %}
+      <button type="submit" class="primary">Ingresar</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

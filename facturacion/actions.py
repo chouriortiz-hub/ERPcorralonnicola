@@ -16,8 +16,12 @@ from .services import ARCAIntegrationError, ARCAService
 def facturar_pedido(pedido: Pedido, punto_venta, tipo_comprobante, usuario):
     if pedido.estado != Pedido.CONFIRMADO:
         raise ValidationError('El pedido debe estar Confirmado (con stock ya impactado) antes de facturarse.')
+    if hasattr(pedido, 'factura') and pedido.factura.estado != Factura.RECHAZADA:
+        raise ValidationError('Este pedido ya tiene una factura autorizada o pendiente.')
     if hasattr(pedido, 'factura'):
-        raise ValidationError('Este pedido ya tiene una factura asociada.')
+        # La factura previa fue rechazada por ARCA: se descarta el intento
+        # fallido y se genera una nueva, para permitir corregir y reintentar.
+        pedido.factura.delete()
 
     factura = Factura.objects.create(
         pedido=pedido,
@@ -40,3 +44,19 @@ def facturar_pedido(pedido: Pedido, punto_venta, tipo_comprobante, usuario):
         raise
 
     return factura
+
+
+def facturar_pedido_completo(pedido: Pedido, punto_venta, tipo_comprobante, usuario):
+    """
+    Punto de entrada para el flujo "Facturar" de la pantalla de Nuevo
+    Pedido: el pedido ya fue creado y confirmado (con el stock de mostrador
+    ya descontado) en un paso previo e independiente. Acá solo se dispara
+    la facturación.
+
+    A propósito NO se envuelve esto en el mismo atomic que la creación del
+    pedido: si ARCA rechaza el comprobante, la mercadería de mostrador ya
+    salió físicamente del depósito (no tiene sentido revertirla), y tanto
+    el Pedido (CONFIRMADO) como la Factura (RECHAZADA, con motivo) quedan
+    persistidos para poder corregir los datos y reintentar.
+    """
+    return facturar_pedido(pedido, punto_venta, tipo_comprobante, usuario)

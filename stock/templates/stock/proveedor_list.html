@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Proveedores — Corralón Nicola{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div><h1>Proveedores</h1><div class="page-subtitle">Proveedores habituales del corralón</div></div>
+  {% if permisos_modulos.stock > 1 %}<a class="btn btn-primary" href="{% url 'stock:proveedor_form' %}">+ Nuevo proveedor</a>{% endif %}
+</div>
+
+<form method="get" class="filter-bar">
+  <input type="text" name="q" placeholder="Buscar por nombre o CUIT..." value="{{ q }}">
+  <button type="submit" class="btn-outline">Buscar</button>
+</form>
+
+<div class="card">
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead><tr><th>Nombre</th><th>CUIT</th><th>Teléfono</th><th>Estado</th><th></th></tr></thead>
+      <tbody>
+        {% for proveedor in proveedores %}
+        <tr>
+          <td>{{ proveedor.nombre }}</td>
+          <td>{{ proveedor.cuit|default:"—" }}</td>
+          <td>{{ proveedor.telefono|default:"—" }}</td>
+          <td>{% if proveedor.activo %}<span class="badge badge-verde">Activo</span>{% else %}<span class="badge badge-rojo">Inactivo</span>{% endif %}</td>
+          <td>{% if permisos_modulos.stock > 1 %}<a class="btn btn-outline" href="{% url 'stock:proveedor_form' proveedor.pk %}">Editar</a>{% endif %}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="5" class="empty-state">No hay proveedores cargados.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% include "_paginacion.html" with page_obj=proveedores %}
+</div>
+{% endblock %}

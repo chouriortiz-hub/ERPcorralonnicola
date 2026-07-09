@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Vehículos — Corralón Nicola{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div><h1>Vehículos</h1></div>
+  {% if permisos_modulos.repartos > 1 %}<a class="btn btn-primary" href="{% url 'repartos:vehiculo_form' %}">+ Nuevo vehículo</a>{% endif %}
+</div>
+
+<div class="card">
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead><tr><th>Patente</th><th>Descripción</th><th>Estado</th><th></th></tr></thead>
+      <tbody>
+        {% for vehiculo in vehiculos %}
+        <tr>
+          <td>{{ vehiculo.patente }}</td>
+          <td>{{ vehiculo.descripcion|default:"—" }}</td>
+          <td>{% if vehiculo.activo %}<span class="badge badge-verde">Activo</span>{% else %}<span class="badge badge-rojo">Inactivo</span>{% endif %}</td>
+          <td>{% if permisos_modulos.repartos > 1 %}<a class="btn btn-outline" href="{% url 'repartos:vehiculo_form' vehiculo.pk %}">Editar</a>{% endif %}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="4" class="empty-state">No hay vehículos cargados.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% include "_paginacion.html" with page_obj=vehiculos %}
+</div>
+{% endblock %}

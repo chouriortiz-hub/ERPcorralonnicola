@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}{{ factura }} — Corralón Nicola{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div><h1>{{ factura }}</h1><div class="page-subtitle">{{ factura.cliente }} — {{ factura.fecha|date:"d/m/Y H:i" }}</div></div>
+  <a class="btn btn-primary" href="{% url 'facturacion:factura_imprimir' factura.pk %}">Imprimir</a>
+</div>
+
+<div class="card">
+  <p><strong>Estado:</strong> <span class="badge badge-naranja">{{ factura.get_estado_display }}</span></p>
+  <p><strong>Punto de venta:</strong> {{ factura.punto_venta }} &nbsp; <strong>Pedido origen:</strong> <a href="{% url 'ventas:pedido_detalle' factura.pedido.pk %}">#{{ factura.pedido.pk }}</a></p>
+  {% if factura.cae %}<p><strong>CAE:</strong> {{ factura.cae }} — vence {{ factura.cae_vencimiento|date:"d/m/Y" }}</p>{% endif %}
+  {% if factura.motivo_rechazo %}<p><strong>Motivo de rechazo:</strong> {{ factura.motivo_rechazo }}</p>{% endif %}
+
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead><tr><th>Producto</th><th class="numeric">Cantidad</th><th class="numeric">Precio unit.</th><th class="numeric">Subtotal</th></tr></thead>
+      <tbody>
+        {% for linea in factura.lineas.all %}
+        <tr>
+          <td>{{ linea.producto }}</td>
+          <td class="numeric">{{ linea.cantidad }}</td>
+          <td class="numeric">${{ linea.precio_unitario|floatformat:2 }}</td>
+          <td class="numeric">${{ linea.subtotal|floatformat:2 }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr><td colspan="3">Subtotal</td><td class="numeric">${{ factura.subtotal|floatformat:2 }}</td></tr>
+        <tr><td colspan="3">IVA</td><td class="numeric">${{ factura.iva|floatformat:2 }}</td></tr>
+        <tr><td colspan="3"><strong>Total</strong></td><td class="numeric"><strong>${{ factura.total|floatformat:2 }}</strong></td></tr>
+      </tfoot>
+    </table>
+  </div>
+</div>
+{% endblock %}

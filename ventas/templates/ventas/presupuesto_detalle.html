@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Presupuesto #{{ presupuesto.pk }} — Corralón Nicola{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div><h1>Presupuesto #{{ presupuesto.pk }}</h1><div class="page-subtitle">{{ presupuesto.cliente }} — {{ presupuesto.fecha|date:"d/m/Y H:i" }}</div></div>
+  <div class="actions" style="margin-top:0;">
+    <a class="btn btn-outline" href="{% url 'ventas:presupuesto_imprimir' presupuesto.pk %}">Imprimir</a>
+    {% if presupuesto.estado != 'CONVERTIDO' and permisos_modulos.ventas > 1 %}
+    <form method="post">
+      {% csrf_token %}
+      <input type="hidden" name="accion" value="convertir">
+      <button type="submit" class="primary">Convertir a pedido</button>
+    </form>
+    {% endif %}
+  </div>
+</div>
+
+<div class="card">
+  <p><strong>Estado:</strong> <span class="badge badge-naranja">{{ presupuesto.get_estado_display }}</span></p>
+  <p><strong>Vendedor:</strong> {{ presupuesto.vendedor }} &nbsp; <strong>Validez:</strong> {{ presupuesto.validez_dias }} días</p>
+  {% if presupuesto.observaciones %}<p><strong>Observaciones:</strong> {{ presupuesto.observaciones }}</p>{% endif %}
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead><tr><th>Producto</th><th class="numeric">Cantidad</th><th class="numeric">Precio unit.</th><th class="numeric">Subtotal</th></tr></thead>
+      <tbody>
+        {% for linea in presupuesto.lineas.all %}
+        <tr>
+          <td>{{ linea.producto }}</td>
+          <td class="numeric">{{ linea.cantidad }}</td>
+          <td class="numeric">${{ linea.precio_unitario|floatformat:2 }}</td>
+          <td class="numeric">${{ linea.subtotal|floatformat:2 }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot><tr><td colspan="3"><strong>Total</strong></td><td class="numeric"><strong>${{ presupuesto.total|floatformat:2 }}</strong></td></tr></tfoot>
+    </table>
+  </div>
+</div>
+{% endblock %}

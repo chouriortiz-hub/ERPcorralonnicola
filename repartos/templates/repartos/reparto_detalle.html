@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% block title %}Reparto #{{ reparto.pk }} — Corralón Nicola{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div><h1>Reparto #{{ reparto.pk }}</h1><div class="page-subtitle">{{ reparto.fecha|date:"d/m/Y" }} — {{ reparto.chofer }} ({{ reparto.vehiculo }})</div></div>
+  {% if reparto.estado == 'PROGRAMADO' and permisos_modulos.repartos > 1 %}
+  <form method="post">
+    {% csrf_token %}
+    <input type="hidden" name="accion" value="salida">
+    <button type="submit" class="primary">Marcar salida del depósito</button>
+  </form>
+  {% endif %}
+</div>
+
+<div class="card">
+  <p><strong>Estado:</strong> <span class="badge badge-naranja">{{ reparto.get_estado_display }}</span></p>
+  {% if reparto.observaciones %}<p><strong>Observaciones:</strong> {{ reparto.observaciones }}</p>{% endif %}
+
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead><tr><th>Orden</th><th>Pedido</th><th>Cliente</th><th>Dirección</th><th>Entrega</th><th></th></tr></thead>
+      <tbody>
+        {% for rp in reparto.pedidos.all %}
+        <tr>
+          <td>{{ rp.orden }}</td>
+          <td><a href="{% url 'ventas:pedido_detalle' rp.pedido.pk %}">#{{ rp.pedido.pk }}</a></td>
+          <td>{{ rp.pedido.cliente }}</td>
+          <td>{{ rp.direccion_entrega|default:"—" }}</td>
+          <td>
+            {% if rp.estado_entrega == 'ENTREGADO' %}<span class="badge badge-verde">{{ rp.get_estado_entrega_display }}</span>
+            {% elif rp.estado_entrega == 'NO_ENTREGADO' %}<span class="badge badge-rojo">{{ rp.get_estado_entrega_display }}</span>
+            {% else %}<span class="badge badge-naranja">{{ rp.get_estado_entrega_display }}</span>{% endif %}
+          </td>
+          <td>
+            {% if rp.estado_entrega == 'PENDIENTE' and reparto.estado != 'PROGRAMADO' and permisos_modulos.repartos > 1 %}
+            <form method="post" action="{% url 'repartos:repartopedido_entrega' rp.pk %}" style="display:inline;">
+              {% csrf_token %}
+              <input type="hidden" name="accion" value="entregado">
+              <button type="submit" class="btn-outline">Entregado</button>
+            </form>
+            <form method="post" action="{% url 'repartos:repartopedido_entrega' rp.pk %}" style="display:inline;">
+              {% csrf_token %}
+              <input type="hidden" name="accion" value="no_entregado">
+              <button type="submit" class="btn-outline">No entregado</button>
+            </form>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6" class="empty-state">Todavía no hay pedidos asignados a este reparto.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% if reparto.estado == 'PROGRAMADO' and permisos_modulos.repartos > 1 %}
+<div class="card">
+  <h2>Agregar pedido al reparto</h2>
+  <input type="text" id="buscar-pedido" placeholder="Buscar por número de pedido o cliente..." autocomplete="off">
+  <ul id="resultados-pedido" class="resultados-lista"></ul>
+</div>
+
+<form method="post" id="form-agregar-pedido" style="display:none;">
+  {% csrf_token %}
+  <input type="hidden" name="accion" value="agregar_pedido">
+  <input type="hidden" name="pedido_id" id="pedido_id_agregar">
+</form>
+
+<script>
+(function () {
+  let buscarTimeout;
+  document.getElementById('buscar-pedido').addEventListener('input', function (e) {
+    clearTimeout(buscarTimeout);
+    const q = e.target.value.trim();
+    const ul = document.getElementById('resultados-pedido');
+    if (!q) { ul.innerHTML = ''; return; }
+    buscarTimeout = setTimeout(function () {
+      fetch('{% url "repartos:buscar_pedidos_pendientes" %}?q=' + encodeURIComponent(q))
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          ul.innerHTML = '';
+          (data.resultados || []).forEach(function (p) {
+            const li = document.createElement('li');
+            const span = document.createElement('span');
+            span.textContent = '#' + p.id + ' - ' + p.cliente + ' — ' + (p.direccion || 'sin dirección') + ' (' + p.estado + ')';
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.textContent = 'Agregar';
+            btn.addEventListener('click', function () {
+              document.getElementById('pedido_id_agregar').value = p.id;
+              document.getElementById('form-agregar-pedido').submit();
+            });
+            li.appendChild(span);
+            li.appendChild(btn);
+            ul.appendChild(li);
+          });
+        });
+    }, 250);
+  });
+})();
+</script>
+{% endif %}
+{% endblock %}

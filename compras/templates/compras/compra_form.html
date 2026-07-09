@@ -1,0 +1,225 @@
+{% extends "base.html" %}
+{% block title %}Nueva Compra — Corralón Nicola{% endblock %}
+{% block content %}
+<div class="page-header"><h1>Nueva Compra</h1></div>
+
+<form method="post" id="form-compra">
+  {% csrf_token %}
+
+  <div class="card">
+    <h2>1. Productos</h2>
+    <input type="text" id="buscar-producto" placeholder="Buscar producto por nombre o código..." autocomplete="off">
+    <ul id="resultados-producto" class="resultados-lista"></ul>
+
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Producto</th>
+            <th style="width:6.5rem">Cantidad</th>
+            <th style="width:7.5rem">Precio unit.</th>
+            <th style="width:6rem">Subtotal</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="carrito-body">
+          <tr id="carrito-vacio"><td colspan="5"><em>Todavía no agregaste productos.</em></td></tr>
+        </tbody>
+        <tfoot>
+          <tr>
+            <td colspan="2"><strong>Total</strong></td>
+            <td id="carrito-total"><strong>0.00</strong></td>
+            <td></td>
+            <td></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>2. Proveedor</h2>
+    <input type="text" id="buscar-proveedor" placeholder="Buscar proveedor por nombre..." autocomplete="off">
+    <ul id="resultados-proveedor" class="resultados-lista"></ul>
+    <input type="hidden" name="proveedor_id" id="proveedor_id" value="">
+    <p class="page-subtitle" id="proveedor-elegido">Ningún proveedor seleccionado.</p>
+  </div>
+
+  <div class="card">
+    <h2>3. Datos de la compra</h2>
+    <div class="grid-2">
+      <label>Nº de comprobante
+        <input type="text" name="numero_comprobante">
+      </label>
+    </div>
+    <label>Observaciones
+      <textarea name="observaciones" rows="2"></textarea>
+    </label>
+  </div>
+
+  <input type="hidden" name="carrito_json" id="carrito_json" value='{{ carrito_json }}'>
+
+  <div class="actions">
+    <button type="submit" class="primary">Guardar compra (borrador)</button>
+    <a class="btn btn-outline" href="{% url 'compras:compra_list' %}">Cancelar</a>
+  </div>
+</form>
+
+<script>
+(function () {
+  const carritoJsonInput = document.getElementById('carrito_json');
+  let carrito = [];
+  try {
+    carrito = JSON.parse(carritoJsonInput.value || '[]');
+  } catch (e) {
+    carrito = [];
+  }
+
+  function renderCarrito() {
+    const tbody = document.getElementById('carrito-body');
+    tbody.innerHTML = '';
+    if (carrito.length === 0) {
+      tbody.innerHTML = '<tr id="carrito-vacio"><td colspan="5"><em>Todavía no agregaste productos.</em></td></tr>';
+      document.getElementById('carrito-total').innerHTML = '<strong>0.00</strong>';
+      return;
+    }
+    let total = 0;
+    carrito.forEach(function (item, idx) {
+      const cantidad = parseFloat(item.cantidad) || 0;
+      const precio = parseFloat(item.precio_unitario) || 0;
+      const subtotal = cantidad * precio;
+      total += subtotal;
+
+      const tr = document.createElement('tr');
+      const tdProducto = document.createElement('td');
+      tdProducto.textContent = (item.codigo ? item.codigo + ' - ' : '') + item.nombre;
+      tr.appendChild(tdProducto);
+
+      const tdCantidad = document.createElement('td');
+      const inputCantidad = document.createElement('input');
+      inputCantidad.type = 'number';
+      inputCantidad.min = '0.001';
+      inputCantidad.step = '0.001';
+      inputCantidad.value = item.cantidad;
+      inputCantidad.addEventListener('change', function () {
+        carrito[idx].cantidad = inputCantidad.value;
+        renderCarrito();
+      });
+      tdCantidad.appendChild(inputCantidad);
+      tr.appendChild(tdCantidad);
+
+      const tdPrecio = document.createElement('td');
+      const inputPrecio = document.createElement('input');
+      inputPrecio.type = 'number';
+      inputPrecio.min = '0';
+      inputPrecio.step = '0.01';
+      inputPrecio.value = item.precio_unitario;
+      inputPrecio.addEventListener('change', function () {
+        carrito[idx].precio_unitario = inputPrecio.value;
+        renderCarrito();
+      });
+      tdPrecio.appendChild(inputPrecio);
+      tr.appendChild(tdPrecio);
+
+      const tdSubtotal = document.createElement('td');
+      tdSubtotal.textContent = subtotal.toFixed(2);
+      tr.appendChild(tdSubtotal);
+
+      const tdQuitar = document.createElement('td');
+      const btnQuitar = document.createElement('button');
+      btnQuitar.type = 'button';
+      btnQuitar.textContent = 'Quitar';
+      btnQuitar.addEventListener('click', function () {
+        carrito.splice(idx, 1);
+        renderCarrito();
+      });
+      tdQuitar.appendChild(btnQuitar);
+      tr.appendChild(tdQuitar);
+
+      tbody.appendChild(tr);
+    });
+    document.getElementById('carrito-total').innerHTML = '<strong>' + total.toFixed(2) + '</strong>';
+  }
+
+  let buscarProductoTimeout;
+  document.getElementById('buscar-producto').addEventListener('input', function (e) {
+    clearTimeout(buscarProductoTimeout);
+    const q = e.target.value.trim();
+    const ul = document.getElementById('resultados-producto');
+    if (!q) { ul.innerHTML = ''; return; }
+    buscarProductoTimeout = setTimeout(function () {
+      fetch('{% url "ventas:buscar_productos" %}?q=' + encodeURIComponent(q))
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          ul.innerHTML = '';
+          (data.resultados || []).forEach(function (p) {
+            const li = document.createElement('li');
+            const span = document.createElement('span');
+            span.textContent = p.codigo + ' - ' + p.nombre + ' — Stock: ' + p.stock_actual + ' ' + p.unidad_medida;
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.textContent = 'Agregar';
+            btn.addEventListener('click', function () {
+              carrito.push({ producto_id: p.id, codigo: p.codigo, nombre: p.nombre, cantidad: '1', precio_unitario: '0' });
+              renderCarrito();
+              document.getElementById('buscar-producto').value = '';
+              ul.innerHTML = '';
+            });
+            li.appendChild(span);
+            li.appendChild(btn);
+            ul.appendChild(li);
+          });
+        });
+    }, 250);
+  });
+
+  let buscarProveedorTimeout;
+  document.getElementById('buscar-proveedor').addEventListener('input', function (e) {
+    clearTimeout(buscarProveedorTimeout);
+    const q = e.target.value.trim();
+    const ul = document.getElementById('resultados-proveedor');
+    if (!q) { ul.innerHTML = ''; return; }
+    buscarProveedorTimeout = setTimeout(function () {
+      fetch('{% url "compras:buscar_proveedores" %}?q=' + encodeURIComponent(q))
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          ul.innerHTML = '';
+          (data.resultados || []).forEach(function (p) {
+            const li = document.createElement('li');
+            const span = document.createElement('span');
+            span.textContent = p.nombre + (p.cuit ? ' (' + p.cuit + ')' : '');
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.textContent = 'Elegir';
+            btn.addEventListener('click', function () {
+              document.getElementById('proveedor_id').value = p.id;
+              document.getElementById('proveedor-elegido').textContent = 'Proveedor seleccionado: ' + p.nombre;
+              document.getElementById('buscar-proveedor').value = p.nombre;
+              ul.innerHTML = '';
+            });
+            li.appendChild(span);
+            li.appendChild(btn);
+            ul.appendChild(li);
+          });
+        });
+    }, 250);
+  });
+
+  document.getElementById('form-compra').addEventListener('submit', function (e) {
+    if (carrito.length === 0) {
+      e.preventDefault();
+      alert('Agregá al menos un producto al carrito antes de continuar.');
+      return;
+    }
+    if (!document.getElementById('proveedor_id').value) {
+      e.preventDefault();
+      alert('Elegí un proveedor antes de continuar.');
+      return;
+    }
+    carritoJsonInput.value = JSON.stringify(carrito);
+  });
+
+  renderCarrito();
+})();
+</script>
+{% endblock %}

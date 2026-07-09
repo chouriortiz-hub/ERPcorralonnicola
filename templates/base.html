@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{% block title %}Corralón Nicola{% endblock %}</title>
+<style>
+  :root {
+    color-scheme: light;
+    --negro: #16161a;
+    --negro-suave: #232329;
+    --negro-borde: #323238;
+    --naranja: #f5821f;
+    --naranja-oscuro: #d96b0a;
+    --naranja-suave: #fff1e2;
+    --blanco: #ffffff;
+    --gris-fondo: #f5f6f8;
+    --gris-borde: #e5e7eb;
+    --texto: #1a1a1a;
+    --texto-muted: #6b7280;
+    --sidebar-w: 240px;
+    --topbar-h: 64px;
+  }
+  * { box-sizing: border-box; }
+  body { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; margin: 0; background: var(--gris-fondo); color: var(--texto); }
+  a { color: inherit; }
+
+  /* ---- Sidebar ---- */
+  .sidebar {
+    position: fixed; top: 0; left: 0; width: var(--sidebar-w); height: 100vh;
+    background: var(--negro); color: #fff; overflow-y: auto; z-index: 20;
+    display: flex; flex-direction: column;
+  }
+  .sidebar-brand {
+    display: flex; align-items: center; gap: 0.6rem; padding: 1.1rem 1.25rem;
+    border-bottom: 1px solid var(--negro-borde); flex-shrink: 0;
+  }
+  .sidebar-brand .logo-mark {
+    width: 34px; height: 34px; border-radius: 8px; background: var(--naranja);
+    color: var(--negro); font-weight: 800; font-size: 1.05rem;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .sidebar-brand .logo-text { line-height: 1.1; }
+  .sidebar-brand .logo-text strong { display: block; color: #fff; font-size: 0.95rem; letter-spacing: 0.02em; }
+  .sidebar-brand .logo-text span { display: block; color: var(--naranja); font-size: 0.68rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; }
+
+  .sidebar-nav { padding: 0.75rem 0.6rem 1.5rem; flex: 1; }
+  .nav-group { margin-bottom: 1.1rem; }
+  .nav-group-label {
+    font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.08em;
+    color: #8a8a92; padding: 0.4rem 0.75rem; font-weight: 600;
+  }
+  .nav-link {
+    display: flex; align-items: center; gap: 0.65rem; padding: 0.55rem 0.75rem;
+    border-radius: 7px; color: #d4d4d8; text-decoration: none; font-size: 0.88rem;
+    margin-bottom: 0.1rem; transition: background 0.12s, color 0.12s;
+  }
+  .nav-link svg { width: 17px; height: 17px; flex-shrink: 0; opacity: 0.85; }
+  .nav-link:hover { background: var(--negro-suave); color: #fff; }
+  .nav-link.active { background: var(--naranja); color: var(--negro); font-weight: 600; }
+  .nav-link.active svg { opacity: 1; }
+
+  /* ---- Topbar ---- */
+  .topbar {
+    position: fixed; top: 0; left: var(--sidebar-w); right: 0; height: var(--topbar-h);
+    background: #fff; border-bottom: 1px solid var(--gris-borde);
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 1.5rem; z-index: 10; gap: 1rem;
+  }
+  .topbar-search { flex: 1; max-width: 420px; }
+  .topbar-search form { display: flex; align-items: center; background: var(--gris-fondo); border: 1px solid var(--gris-borde); border-radius: 8px; padding: 0.4rem 0.75rem; gap: 0.5rem; }
+  .topbar-search svg { width: 16px; height: 16px; color: var(--texto-muted); flex-shrink: 0; }
+  .topbar-search input { border: none; background: transparent; outline: none; font: inherit; width: 100%; }
+  .topbar-user { display: flex; align-items: center; gap: 0.9rem; flex-shrink: 0; }
+  .topbar-user .avatar {
+    width: 32px; height: 32px; border-radius: 50%; background: var(--naranja-suave); color: var(--naranja-oscuro);
+    display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.8rem;
+  }
+  .topbar-user .user-info { line-height: 1.15; font-size: 0.82rem; }
+  .topbar-user .user-info strong { display: block; font-size: 0.85rem; }
+  .topbar-user .user-info span { color: var(--texto-muted); }
+  .topbar-user a.logout-link { color: var(--texto-muted); font-size: 0.8rem; text-decoration: none; border: 1px solid var(--gris-borde); border-radius: 6px; padding: 0.35rem 0.6rem; }
+  .topbar-user a.logout-link:hover { border-color: var(--naranja); color: var(--naranja-oscuro); }
+
+  /* ---- Layout wrapper ---- */
+  .main-wrapper { margin-left: var(--sidebar-w); padding-top: var(--topbar-h); min-height: 100vh; }
+  main.content { max-width: 1300px; margin: 0 auto; padding: 1.5rem 2rem 3rem; }
+
+  .page-header { display: flex; align-items: flex-end; justify-content: space-between; gap: 1rem; margin-bottom: 1.25rem; flex-wrap: wrap; }
+  .page-header h1 { margin: 0; font-size: 1.4rem; }
+  .page-header .page-subtitle { color: var(--texto-muted); font-size: 0.85rem; margin-top: 0.2rem; }
+
+  /* ---- Cards / stats ---- */
+  .card { background: #fff; border: 1px solid var(--gris-borde); border-radius: 10px; padding: 1.25rem; box-shadow: 0 1px 2px rgba(16,16,20,0.04); margin-bottom: 1.25rem; }
+  .card h2 { margin-top: 0; font-size: 1rem; }
+  .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
+  .stat-card { background: #fff; border: 1px solid var(--gris-borde); border-radius: 10px; padding: 1.1rem 1.25rem; box-shadow: 0 1px 2px rgba(16,16,20,0.04); }
+  .stat-card .stat-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--texto-muted); font-weight: 600; }
+  .stat-card .stat-value { font-size: 1.9rem; font-weight: 700; margin-top: 0.35rem; color: var(--negro); }
+  .stat-card.accent .stat-value { color: var(--naranja-oscuro); }
+  .stat-card .stat-hint { font-size: 0.75rem; color: var(--texto-muted); margin-top: 0.15rem; }
+
+  /* ---- Messages ---- */
+  .messages { list-style: none; padding: 0; margin: 0 0 1.25rem; }
+  .messages li { padding: 0.6rem 1rem; border-radius: 8px; margin-bottom: 0.5rem; font-size: 0.88rem; }
+  .messages li.error { background: #fdecea; color: #92140c; border: 1px solid #f5c6cb; }
+  .messages li.success { background: #eafaf1; color: #14532d; border: 1px solid #bbf0d1; }
+  .messages li.info { background: #fff1e2; color: #9a4b0c; border: 1px solid #fcd9ae; }
+
+  /* ---- Tables ---- */
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { text-align: left; padding: 0.5rem; border-bottom: 1px solid var(--gris-borde); }
+  table.data-table { font-size: 0.88rem; }
+  .data-table th, .data-table td { padding: 0.65rem 0.75rem; }
+  .data-table th { color: var(--texto-muted); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; font-weight: 600; }
+  .data-table tbody tr:hover { background: var(--naranja-suave); }
+  .data-table td.numeric, .data-table th.numeric { text-align: right; }
+  .empty-state { padding: 2rem 1rem; text-align: center; color: var(--texto-muted); }
+
+  /* ---- Badges ---- */
+  .badge { display: inline-block; padding: 0.2rem 0.6rem; border-radius: 999px; font-size: 0.72rem; font-weight: 600; white-space: nowrap; }
+  .badge-gris { background: #eef0f2; color: #4b5563; }
+  .badge-naranja { background: var(--naranja-suave); color: var(--naranja-oscuro); }
+  .badge-verde { background: #eafaf1; color: #14532d; }
+  .badge-rojo { background: #fdecea; color: #92140c; }
+  .badge-azul { background: #e8f0fe; color: #1a3e72; }
+
+  /* ---- Forms ---- */
+  label { display: block; margin-bottom: 0.9rem; font-size: 0.85rem; font-weight: 500; }
+  input, select, textarea, button { font: inherit; padding: 0.5rem 0.65rem; border-radius: 7px; border: 1px solid #d1d5db; }
+  input, select, textarea { display: block; width: 100%; margin-top: 0.3rem; font-weight: 400; }
+  input:focus, select:focus, textarea:focus { outline: none; border-color: var(--naranja); box-shadow: 0 0 0 3px var(--naranja-suave); }
+  .form-card { max-width: 720px; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 1rem; }
+  .checkbox-row { display: flex; align-items: center; gap: 0.5rem; }
+  .checkbox-row input { width: auto; margin: 0; }
+
+  /* ---- Buttons ---- */
+  button, .btn { cursor: pointer; background: #fff; border: 1px solid #d1d5db; color: var(--texto); font-weight: 600; font-size: 0.85rem; text-decoration: none; display: inline-flex; align-items: center; gap: 0.4rem; }
+  a.btn { padding: 0.5rem 0.85rem; }
+  button.primary, .btn-primary { background: var(--naranja); color: var(--negro); border-color: var(--naranja); }
+  button.primary:hover, .btn-primary:hover { background: var(--naranja-oscuro); border-color: var(--naranja-oscuro); color: #fff; }
+  .btn-dark { background: var(--negro); color: #fff; border-color: var(--negro); }
+  .btn-outline { background: #fff; }
+  .btn-danger { color: #92140c; border-color: #f5c6cb; }
+  .actions { display: flex; gap: 0.75rem; margin-top: 1rem; align-items: center; flex-wrap: wrap; }
+
+  .filter-bar { display: flex; gap: 0.75rem; margin-bottom: 1rem; flex-wrap: wrap; align-items: center; }
+  .filter-bar input, .filter-bar select { width: auto; min-width: 180px; margin-top: 0; }
+
+  .pagination { display: flex; gap: 0.4rem; margin-top: 1rem; align-items: center; font-size: 0.85rem; }
+  .pagination a, .pagination span { padding: 0.35rem 0.65rem; border-radius: 6px; border: 1px solid var(--gris-borde); text-decoration: none; color: var(--texto); }
+  .pagination .current { background: var(--naranja); border-color: var(--naranja); color: var(--negro); font-weight: 700; }
+
+  .resultados-lista { list-style: none; padding: 0; margin: 0.25rem 0 1rem; border: 1px solid var(--gris-borde); border-radius: 8px; max-height: 220px; overflow-y: auto; }
+  .resultados-lista:empty { display: none; border: none; }
+  .resultados-lista li { display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0.75rem; border-bottom: 1px solid #f0f1f3; gap: 0.5rem; }
+  .resultados-lista li:last-child { border-bottom: none; }
+
+  @media print {
+    .sidebar, .topbar, .no-print { display: none !important; }
+    .main-wrapper { margin: 0; padding: 0; }
+    main.content { margin: 0; max-width: 100%; padding: 0; }
+    .card { box-shadow: none; border: 1px solid #ccc; }
+  }
+
+  @media (max-width: 900px) {
+    .sidebar { width: 200px; }
+    .topbar { left: 200px; }
+    .main-wrapper { margin-left: 200px; }
+    :root { --sidebar-w: 200px; }
+  }
+</style>
+{% block extra_head %}{% endblock %}
+</head>
+<body>
+{% if request.user.is_authenticated %}
+<svg style="display:none">
+  <symbol id="ic-grid" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1.2"/><rect x="14" y="3" width="7" height="7" rx="1.2"/><rect x="3" y="14" width="7" height="7" rx="1.2"/><rect x="14" y="14" width="7" height="7" rx="1.2"/></symbol>
+  <symbol id="ic-users" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="8.5" cy="8" r="3"/><path d="M2.5 20c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5"/><circle cx="17" cy="8.5" r="2.4"/><path d="M15.8 14.7c2.4.4 4.2 2.3 4.2 5.3"/></symbol>
+  <symbol id="ic-box" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3.5 7.5 12 3l8.5 4.5V16.5L12 21l-8.5-4.5Z"/><path d="M3.5 7.5 12 12l8.5-4.5"/><path d="M12 12v9"/></symbol>
+  <symbol id="ic-file" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2.5h8l4 4V21a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1Z"/><path d="M14 2.5V7h4"/><path d="M8 12h8M8 16h8"/></symbol>
+  <symbol id="ic-cart" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2.5 3h2l2.4 12.2a1.5 1.5 0 0 0 1.5 1.3h8.6a1.5 1.5 0 0 0 1.5-1.2L20.5 7H6"/><circle cx="9.5" cy="20" r="1.4"/><circle cx="17" cy="20" r="1.4"/></symbol>
+  <symbol id="ic-truck" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="12" height="10" rx="1"/><path d="M14 10h4l4 3.2V16h-8Z"/><circle cx="6.5" cy="18" r="1.7"/><circle cx="17" cy="18" r="1.7"/></symbol>
+  <symbol id="ic-book" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4.5A1.5 1.5 0 0 1 5.5 3H19a1 1 0 0 1 1 1v15a1 1 0 0 1-1 1H5.5A1.5 1.5 0 0 1 4 18.5Z"/><path d="M4 18.5A1.5 1.5 0 0 1 5.5 17H20"/></symbol>
+  <symbol id="ic-shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2.5 4.5 5.5V11c0 5 3 8.4 7.5 10.5 4.5-2.1 7.5-5.5 7.5-10.5V5.5Z"/></symbol>
+  <symbol id="ic-plus-box" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2.5" y="4" width="19" height="16" rx="2"/><path d="M12 8v8M8 12h8"/></symbol>
+  <symbol id="ic-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m20 20-4.6-4.6"/></symbol>
+  <symbol id="ic-dashboard" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 0 1 18 0"/><path d="M12 12 16 8"/><path d="M3 12h18"/></symbol>
+</svg>
+<aside class="sidebar no-print">
+  <div class="sidebar-brand">
+    <div class="logo-mark">CN</div>
+    <div class="logo-text"><strong>CORRALÓN NICOLA</strong><span>Panel de gestión</span></div>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-group">
+      <a class="nav-link{% if request.resolver_match.view_name == 'core:dashboard' %} active{% endif %}" href="{% url 'core:dashboard' %}"><svg><use href="#ic-dashboard"/></svg>Dashboard</a>
+    </div>
+
+    {% if permisos_modulos.ventas > 0 %}
+    <div class="nav-group">
+      <div class="nav-group-label">Ventas</div>
+      {% if permisos_modulos.ventas > 1 %}
+      <a class="nav-link{% if request.resolver_match.view_name == 'ventas:nuevo_pedido' %} active{% endif %}" href="{% url 'ventas:nuevo_pedido' %}"><svg><use href="#ic-plus-box"/></svg>Nuevo pedido</a>
+      {% endif %}
+      <a class="nav-link{% if request.resolver_match.view_name == 'ventas:cliente_list' %} active{% endif %}" href="{% url 'ventas:cliente_list' %}"><svg><use href="#ic-users"/></svg>Clientes</a>
+      <a class="nav-link{% if request.resolver_match.view_name == 'ventas:presupuesto_list' %} active{% endif %}" href="{% url 'ventas:presupuesto_list' %}"><svg><use href="#ic-file"/></svg>Presupuestos</a>
+      <a class="nav-link{% if request.resolver_match.view_name == 'ventas:pedido_list' %} active{% endif %}" href="{% url 'ventas:pedido_list' %}"><svg><use href="#ic-cart"/></svg>Pedidos</a>
+    </div>
+    {% endif %}
+
+    {% if permisos_modulos.stock > 0 %}
+    <div class="nav-group">
+      <div class="nav-group-label">Stock</div>
+      <a class="nav-link{% if request.resolver_match.view_name == 'stock:producto_list' %} active{% endif %}" href="{% url 'stock:producto_list' %}"><svg><use href="#ic-box"/></svg>Productos</a>
+      <a class="nav-link{% if request.resolver_match.view_name == 'stock:categoria_list' %} active{% endif %}" href="{% url 'stock:categoria_list' %}"><svg><use href="#ic-grid"/></svg>Categorías</a>
+      <a class="nav-link{% if request.resolver_match.view_name == 'stock:proveedor_list' %} active{% endif %}" href="{% url 'stock:proveedor_list' %}"><svg><use href="#ic-users"/></svg>Proveedores</a>
+      <a class="nav-link{% if request.resolver_match.view_name == 'stock:movimiento_list' %} active{% endif %}" href="{% url 'stock:movimiento_list' %}"><svg><use href="#ic-book"/></svg>Movimientos</a>
+      {% if permisos_modulos.stock > 1 %}
+      <a class="nav-link{% if request.resolver_match.view_name == 'stock:ajuste_stock' %} active{% endif %}" href="{% url 'stock:ajuste_stock' %}"><svg><use href="#ic-plus-box"/></svg>Ajuste de stock</a>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    {% if permisos_modulos.compras > 0 %}
+    <div class="nav-group">
+      <div class="nav-group-label">Compras</div>
+      <a class="nav-link{% if request.resolver_match.view_name == 'compras:compra_list' %} active{% endif %}" href="{% url 'compras:compra_list' %}"><svg><use href="#ic-cart"/></svg>Compras</a>
+    </div>
+    {% endif %}
+
+    {% if permisos_modulos.facturacion > 0 %}
+    <div class="nav-group">
+      <div class="nav-group-label">Facturación</div>
+      <a class="nav-link{% if request.resolver_match.view_name == 'facturacion:factura_list' %} active{% endif %}" href="{% url 'facturacion:factura_list' %}"><svg><use href="#ic-file"/></svg>Facturas</a>
+      <a class="nav-link{% if request.resolver_match.view_name == 'facturacion:puntoventa_list' %} active{% endif %}" href="{% url 'facturacion:puntoventa_list' %}"><svg><use href="#ic-grid"/></svg>Puntos de venta</a>
+    </div>
+    {% endif %}
+
+    {% if permisos_modulos.repartos > 0 %}
+    <div class="nav-group">
+      <div class="nav-group-label">Repartos</div>
+      <a class="nav-link{% if request.resolver_match.view_name == 'repartos:reparto_list' %} active{% endif %}" href="{% url 'repartos:reparto_list' %}"><svg><use href="#ic-truck"/></svg>Repartos</a>
+      <a class="nav-link{% if request.resolver_match.view_name == 'repartos:vehiculo_list' %} active{% endif %}" href="{% url 'repartos:vehiculo_list' %}"><svg><use href="#ic-grid"/></svg>Vehículos</a>
+    </div>
+    {% endif %}
+
+    {% if permisos_modulos.finanzas > 0 %}
+    <div class="nav-group">
+      <div class="nav-group-label">Finanzas</div>
+      <a class="nav-link{% if request.resolver_match.view_name == 'finanzas:libro_diario' %} active{% endif %}" href="{% url 'finanzas:libro_diario' %}"><svg><use href="#ic-book"/></svg>Libro diario</a>
+    </div>
+    {% endif %}
+
+    {% if es_admin_sistema %}
+    <div class="nav-group">
+      <div class="nav-group-label">Administración</div>
+      <a class="nav-link{% if request.resolver_match.view_name == 'core:usuario_list' %} active{% endif %}" href="{% url 'core:usuario_list' %}"><svg><use href="#ic-users"/></svg>Usuarios</a>
+      <a class="nav-link{% if request.resolver_match.view_name == 'core:role_list' %} active{% endif %}" href="{% url 'core:role_list' %}"><svg><use href="#ic-shield"/></svg>Roles</a>
+    </div>
+    {% endif %}
+  </nav>
+</aside>
+
+<header class="topbar no-print">
+  <div class="topbar-search">
+    <form method="get" action="{% url 'core:buscar_global' %}">
+      <svg><use href="#ic-search"/></svg>
+      <input type="text" name="q" placeholder="Buscar clientes, productos, pedidos..." value="{{ request.GET.q|default:'' }}">
+    </form>
+  </div>
+  <div class="topbar-user">
+    <div class="user-info">
+      <strong>{{ request.user.get_full_name|default:request.user.username }}</strong>
+      <span>{{ request.user.username }}</span>
+    </div>
+    <div class="avatar">{{ request.user.username|slice:":2"|upper }}</div>
+    <a class="logout-link" href="{% url 'core:logout' %}">Salir</a>
+  </div>
+</header>
+
+<div class="main-wrapper">
+  <main class="content">
+    {% if messages %}
+    <ul class="messages">
+      {% for message in messages %}<li class="{{ message.tags }}">{{ message }}</li>{% endfor %}
+    </ul>
+    {% endif %}
+    {% block content %}{% endblock %}
+  </main>
+</div>
+{% else %}
+<main class="content" style="max-width:1300px;margin:0 auto;padding:1.5rem 2rem 3rem;">
+  {% if messages %}
+  <ul class="messages">
+    {% for message in messages %}<li class="{{ message.tags }}">{{ message }}</li>{% endfor %}
+  </ul>
+  {% endif %}
+  {% block content_publico %}{% endblock %}
+</main>
+{% endif %}
+</body>
+</html>
