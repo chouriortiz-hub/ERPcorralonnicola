@@ -153,6 +153,15 @@ STORAGES = {
     },
 }
 
+# En producción los estáticos se sirven desde STATIC_ROOT, poblado por
+# `collectstatic` antes de arrancar (ver render.yaml). En desarrollo local ese
+# paso no corre, así que WhiteNoise no tiene nada que servir: le indicamos que
+# use los finders de Django para leer los archivos directamente desde la
+# carpeta `static/` de cada app.
+if DEBUG:
+    WHITENOISE_USE_FINDERS = True
+    WHITENOISE_AUTOREFRESH = True
+
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Modelo de usuario propio (core.User)

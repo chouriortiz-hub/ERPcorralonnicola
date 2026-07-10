@@ -1,0 +1,51 @@
+{% load static %}
+{% comment %}
+Cuerpo de una copia de la factura. Se incluye dos veces desde factura_print.html
+(ORIGINAL para el cliente, DUPLICADO para el corralón) para no duplicar el
+markup: es el único lugar con la plantilla del comprobante.
+{% endcomment %}
+<div class="card">
+  <span class="copia-etiqueta">{{ copia_label }}</span>
+  <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.75rem;">
+    <img src="{% static 'core/img/logo.svg' %}" alt="Corralón Nicola" style="width:48px;height:48px;">
+    <strong style="font-size:1.05rem;">CORRALÓN NICOLA</strong>
+  </div>
+  <h1>{{ factura.get_tipo_comprobante_display }}</h1>
+  <p>Punto de venta {{ factura.punto_venta.numero }} — Comprobante N° {{ factura.numero|default:"s/n" }}</p>
+  <p>
+    Estado: {{ factura.get_estado_display }}
+    {% if factura.cae %} — CAE: {{ factura.cae }} (vence {{ factura.cae_vencimiento|date:"d/m/Y" }}){% endif %}
+  </p>
+  {% if factura.motivo_rechazo %}<p><strong>Motivo de rechazo:</strong> {{ factura.motivo_rechazo }}</p>{% endif %}
+  <p><strong>Cliente:</strong> {{ factura.cliente.nombre }}{% if factura.cliente.cuit_dni %} ({{ factura.cliente.cuit_dni }}){% endif %}</p>
+  {% if factura.pedido.direccion_entrega %}<p><strong>Dirección de entrega:</strong> {{ factura.pedido.direccion_entrega }}</p>{% endif %}
+  {% if factura.pedido.fecha_entrega_estimada %}<p><strong>Entrega estimada:</strong> {{ factura.pedido.fecha_entrega_estimada|date:"d/m/Y" }}</p>{% endif %}
+
+  <table>
+    <thead>
+      <tr><th>Producto</th><th>Cantidad</th><th>Precio unit.</th><th>Subtotal</th><th>Entrega</th></tr>
+    </thead>
+    <tbody>
+      {% for linea in factura.pedido.lineas.all %}
+      <tr>
+        <td>{{ linea.producto }}</td>
+        <td>{{ linea.cantidad }}</td>
+        <td>${{ linea.precio_unitario }}</td>
+        <td>${{ linea.subtotal }}</td>
+        <td>
+          {% if linea.sale_con_reparto %}
+            Reparto{% if not linea.stock_descontado %} (pendiente de salida){% endif %}
+          {% else %}
+            Retira en el momento
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+    <tfoot>
+      <tr><td colspan="3">Subtotal</td><td>${{ factura.subtotal }}</td><td></td></tr>
+      <tr><td colspan="3">IVA</td><td>${{ factura.iva }}</td><td></td></tr>
+      <tr><td colspan="3"><strong>Total</strong></td><td><strong>${{ factura.total }}</strong></td><td></td></tr>
+    </tfoot>
+  </table>
+</div>

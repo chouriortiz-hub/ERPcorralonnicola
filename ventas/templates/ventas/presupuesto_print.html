@@ -1,11 +1,17 @@
 {% extends "base.html" %}
+{% load static %}
 {% block title %}Presupuesto #{{ presupuesto.pk }}{% endblock %}
 {% block content %}
 <div class="no-print actions">
   <a href="{% url 'ventas:nuevo_pedido' %}">&larr; Nuevo pedido</a>
-  <button type="button" onclick="window.print()" class="primary">Imprimir</button>
+  <button type="button" onclick="window.print()" class="primary">Imprimir / Guardar como PDF</button>
 </div>
+<p class="no-print"><small>En el diálogo de impresión, elegí tu impresora para imprimir en papel, o "Guardar como PDF" (o "Microsoft Print to PDF") como destino para descargarlo.</small></p>
 <div class="card">
+  <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.75rem;">
+    <img src="{% static 'core/img/logo.svg' %}" alt="Corralón Nicola" style="width:48px;height:48px;">
+    <strong style="font-size:1.05rem;">CORRALÓN NICOLA</strong>
+  </div>
   <h1>Presupuesto #{{ presupuesto.pk }}</h1>
   <p>Fecha: {{ presupuesto.fecha|date:"d/m/Y H:i" }} — Válido por {{ presupuesto.validez_dias }} días</p>
   <p><strong>Cliente:</strong> {{ presupuesto.cliente.nombre }}{% if presupuesto.cliente.cuit_dni %} ({{ presupuesto.cliente.cuit_dni }}){% endif %}</p>

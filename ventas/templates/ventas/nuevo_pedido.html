@@ -70,15 +70,37 @@
   </div>
 
   <div class="card">
-    <h2>3. Si vas a imprimir como Presupuesto</h2>
-    <label>Validez (días)
-      <input type="number" name="validez_dias" value="7" min="1" style="max-width:8rem">
+    <label>Observaciones
+      <textarea name="observaciones" rows="2"></textarea>
     </label>
   </div>
 
+  <div class="card" id="elegir-modo">
+    <h2>3. ¿Qué querés hacer con este pedido?</h2>
+    <div class="actions">
+      <button type="button" id="btn-elegir-presupuesto">Generar Presupuesto</button>
+      {% if puede_facturar %}
+      <button type="button" id="btn-elegir-facturar" class="primary">Facturar Pedido</button>
+      {% else %}
+      <p><small>No tenés permiso para facturar pedidos. Solo podés generar presupuestos.</small></p>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="card" id="seccion-presupuesto" style="display:none">
+    <h2>Datos del Presupuesto</h2>
+    <label>Validez (días)
+      <input type="number" name="validez_dias" value="7" min="1" style="max-width:8rem">
+    </label>
+    <div class="actions">
+      <button type="button" class="btn-volver">&larr; Volver</button>
+      <button type="submit" name="modo" value="presupuesto" class="primary">Confirmar Presupuesto e Imprimir</button>
+    </div>
+  </div>
+
   {% if puede_facturar %}
-  <div class="card">
-    <h2>4. Si vas a Facturar</h2>
+  <div class="card" id="seccion-facturar" style="display:none">
+    <h2>Datos de Facturación</h2>
     <div class="grid-2">
       <label>Punto de venta
         <select name="punto_venta_id">
@@ -101,27 +123,14 @@
         <input type="date" name="fecha_entrega_estimada">
       </label>
     </div>
-  </div>
-  {% else %}
-  <div class="card">
-    <p>No tenés permiso para facturar pedidos. Solo podés generar presupuestos.</p>
+    <div class="actions">
+      <button type="button" class="btn-volver">&larr; Volver</button>
+      <button type="submit" name="modo" value="facturar" class="primary">Confirmar y Facturar</button>
+    </div>
   </div>
   {% endif %}
 
-  <div class="card">
-    <label>Observaciones
-      <textarea name="observaciones" rows="2"></textarea>
-    </label>
-  </div>
-
   <input type="hidden" name="carrito_json" id="carrito_json" value='{{ carrito_json }}'>
-
-  <div class="actions">
-    <button type="submit" name="modo" value="presupuesto">Imprimir como Presupuesto</button>
-    {% if puede_facturar %}
-    <button type="submit" name="modo" value="facturar" class="primary">Facturar Pedido</button>
-    {% endif %}
-  </div>
 </form>
 
 <script>
@@ -308,6 +317,39 @@
     }
     carritoJsonInput.value = JSON.stringify(carrito);
   });
+
+  // --- Elegir modo (Presupuesto / Facturar): las secciones 3 y 4 están
+  // ocultas hasta que el vendedor elige qué hacer con el pedido armado.
+  const seccionPresupuesto = document.getElementById('seccion-presupuesto');
+  const seccionFacturar = document.getElementById('seccion-facturar');
+  const elegirModoCard = document.getElementById('elegir-modo');
+
+  function elegirModo(modo) {
+    elegirModoCard.style.display = 'none';
+    if (seccionPresupuesto) seccionPresupuesto.style.display = modo === 'presupuesto' ? '' : 'none';
+    if (seccionFacturar) seccionFacturar.style.display = modo === 'facturar' ? '' : 'none';
+    const objetivo = modo === 'presupuesto' ? seccionPresupuesto : seccionFacturar;
+    if (objetivo) objetivo.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function volverAElegir() {
+    elegirModoCard.style.display = '';
+    if (seccionPresupuesto) seccionPresupuesto.style.display = 'none';
+    if (seccionFacturar) seccionFacturar.style.display = 'none';
+    elegirModoCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  const btnElegirPresupuesto = document.getElementById('btn-elegir-presupuesto');
+  if (btnElegirPresupuesto) btnElegirPresupuesto.addEventListener('click', function () { elegirModo('presupuesto'); });
+  const btnElegirFacturar = document.getElementById('btn-elegir-facturar');
+  if (btnElegirFacturar) btnElegirFacturar.addEventListener('click', function () { elegirModo('facturar'); });
+  document.querySelectorAll('.btn-volver').forEach(function (btn) {
+    btn.addEventListener('click', volverAElegir);
+  });
+
+  {% if modo %}
+  elegirModo('{{ modo }}');
+  {% endif %}
 
   renderCarrito();
 })();

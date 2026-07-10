@@ -113,11 +113,13 @@ def nuevo_pedido(request):
             return render(request, 'ventas/nuevo_pedido.html', {
                 **contexto_base,
                 'carrito_json': carrito_json,
+                'modo': modo,
             })
 
     return render(request, 'ventas/nuevo_pedido.html', {
         **contexto_base,
         'carrito_json': '[]',
+        'modo': '',
     })
 
 
