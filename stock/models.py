@@ -82,6 +82,13 @@ class Producto(models.Model):
         ),
     )
 
+    # --- Ficha informativa (carga manual, solo Administrador) ---
+    descripcion_uso = models.TextField(
+        blank=True,
+        verbose_name='Descripción / uso',
+        help_text='Ficha visible para todos los roles. Solo el Administrador puede editarla.',
+    )
+
     activo = models.BooleanField(default=True)
     creado = models.DateTimeField(auto_now_add=True)
     actualizado = models.DateTimeField(auto_now=True)

@@ -1,5 +1,7 @@
 from django.contrib import admin
 
+from core.permissions import es_administrador
+
 from .models import Categoria, MovimientoStock, Producto, Proveedor
 
 
@@ -23,6 +25,11 @@ class ProductoAdmin(admin.ModelAdmin):
     list_filter = ('categoria', 'descuenta_stock', 'activo')
     search_fields = ('codigo', 'nombre')
     list_editable = ('descuenta_stock', 'precio_venta')
+
+    def get_readonly_fields(self, request, obj=None):
+        if es_administrador(request.user):
+            return ()
+        return ('descripcion_uso',)
 
 
 @admin.register(MovimientoStock)

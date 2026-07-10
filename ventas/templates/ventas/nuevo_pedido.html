@@ -3,6 +3,12 @@
 {% block content %}
 <h1>Nuevo Pedido</h1>
 
+{% for aviso in avisos_activos %}
+<div class="aviso-banner aviso-banner-{{ aviso.tipo|lower }}">
+  <strong>{{ aviso.get_tipo_display }}:</strong> {{ aviso.titulo }} — {{ aviso.mensaje }}
+</div>
+{% endfor %}
+
 <form method="post" id="form-pedido">
   {% csrf_token %}
 
@@ -148,11 +154,45 @@
         cantidad: item.cantidad !== undefined ? String(item.cantidad) : '1',
         precio_unitario: item.precio_unitario !== undefined ? String(item.precio_unitario) : '0',
         sale_con_reparto: !!item.sale_con_reparto,
+        descripcion_uso: item.descripcion_uso || '',
+        avisos: item.avisos || [],
       };
     });
   } catch (e) {
     carrito = [];
   }
+
+  function crearInfoNodos(descripcionUso, avisos) {
+    const frag = document.createDocumentFragment();
+    if (descripcionUso) {
+      const info = document.createElement('span');
+      info.className = 'info-icon';
+      info.textContent = 'ⓘ';
+      info.tabIndex = 0;
+      const tip = document.createElement('span');
+      tip.className = 'info-tooltip';
+      tip.textContent = descripcionUso;
+      info.appendChild(tip);
+      info.addEventListener('click', function (e) {
+        e.stopPropagation();
+        const abierto = info.classList.contains('info-icon-open');
+        document.querySelectorAll('.info-icon-open').forEach(function (el) { el.classList.remove('info-icon-open'); });
+        if (!abierto) { info.classList.add('info-icon-open'); }
+      });
+      frag.appendChild(info);
+    }
+    (avisos || []).forEach(function (aviso) {
+      const badge = document.createElement('span');
+      badge.className = 'aviso-badge aviso-badge-' + aviso.tipo.toLowerCase();
+      badge.textContent = aviso.titulo;
+      badge.title = aviso.titulo;
+      frag.appendChild(badge);
+    });
+    return frag;
+  }
+  document.addEventListener('click', function () {
+    document.querySelectorAll('.info-icon-open').forEach(function (el) { el.classList.remove('info-icon-open'); });
+  });
 
   function renderCarrito() {
     const tbody = document.getElementById('carrito-body');
@@ -171,7 +211,8 @@
 
       const tr = document.createElement('tr');
       const tdProducto = document.createElement('td');
-      tdProducto.textContent = (item.codigo ? item.codigo + ' - ' : '') + item.nombre;
+      tdProducto.appendChild(document.createTextNode((item.codigo ? item.codigo + ' - ' : '') + item.nombre + ' '));
+      tdProducto.appendChild(crearInfoNodos(item.descripcion_uso, item.avisos));
       tr.appendChild(tdProducto);
 
       const tdCantidad = document.createElement('td');
@@ -248,7 +289,8 @@
           (data.resultados || []).forEach(function (p) {
             const li = document.createElement('li');
             const span = document.createElement('span');
-            span.textContent = p.codigo + ' - ' + p.nombre + ' — Stock: ' + p.stock_actual + ' ' + p.unidad_medida + ' — $' + p.precio_venta;
+            span.textContent = p.codigo + ' - ' + p.nombre + ' — Stock: ' + p.stock_actual + ' ' + p.unidad_medida + ' — $' + p.precio_venta + ' ';
+            span.appendChild(crearInfoNodos(p.descripcion_uso, p.avisos));
             const btn = document.createElement('button');
             btn.type = 'button';
             btn.textContent = 'Agregar';
@@ -257,6 +299,7 @@
                 producto_id: p.id, codigo: p.codigo, nombre: p.nombre,
                 unidad_medida: p.unidad_medida, descuenta_stock: p.descuenta_stock,
                 cantidad: '1', precio_unitario: p.precio_venta, sale_con_reparto: false,
+                descripcion_uso: p.descripcion_uso || '', avisos: p.avisos || [],
               });
               renderCarrito();
               document.getElementById('buscar-producto').value = '';

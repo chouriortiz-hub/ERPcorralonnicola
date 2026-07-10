@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Avisos — Corralón Nicola{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div><h1>Avisos</h1><div class="page-subtitle">Ofertas y prioridades de venta para mostrador</div></div>
+  <a class="btn btn-primary" href="{% url 'comunicados:aviso_form' %}">+ Nuevo aviso</a>
+</div>
+
+<div class="card">
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead><tr><th>Título</th><th>Tipo</th><th>Productos</th><th>Vence</th><th>Estado</th><th>Creado por</th><th></th></tr></thead>
+      <tbody>
+        {% for aviso in avisos %}
+        <tr>
+          <td>{{ aviso.titulo }}</td>
+          <td>{{ aviso.get_tipo_display }}</td>
+          <td>{{ aviso.productos.count }}</td>
+          <td>{{ aviso.fecha_vencimiento|default:"—" }}</td>
+          <td>
+            {% if aviso.vigente %}<span class="badge badge-verde">Vigente</span>
+            {% elif aviso.activo %}<span class="badge badge-gris">Vencido</span>
+            {% else %}<span class="badge badge-rojo">Dado de baja</span>{% endif %}
+          </td>
+          <td>{{ aviso.creado_por }}</td>
+          <td>
+            <a class="btn btn-outline" href="{% url 'comunicados:aviso_form' aviso.pk %}">Editar</a>
+            <form method="post" action="{% url 'comunicados:aviso_toggle' aviso.pk %}" style="display:inline">
+              {% csrf_token %}
+              <button type="submit" class="btn-outline">{% if aviso.activo %}Dar de baja{% else %}Reactivar{% endif %}</button>
+            </form>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="7" class="empty-state">No hay avisos cargados.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% include "_paginacion.html" with page_obj=avisos %}
+</div>
+{% endblock %}

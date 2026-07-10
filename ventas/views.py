@@ -15,6 +15,7 @@ from django.db.models import Q
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 
+from comunicados.models import Aviso
 from core.models import Role
 from core.permissions import tiene_permiso
 from core.views_utils import exigir_permiso, paginar
@@ -44,6 +45,7 @@ def nuevo_pedido(request):
         'puntos_venta': PuntoVenta.objects.all(),
         'tipos_comprobante': TipoComprobante.choices,
         'condiciones_iva': Cliente._meta.get_field('condicion_iva').choices,
+        'avisos_activos': Aviso.objects.vigentes(),
     }
 
     if request.method == 'POST':
@@ -129,7 +131,7 @@ def buscar_productos(request):
         return JsonResponse({'error': 'Sin permiso.'}, status=403)
 
     q = request.GET.get('q', '').strip()
-    productos = Producto.objects.filter(activo=True)
+    productos = Producto.objects.filter(activo=True).prefetch_related('avisos')
     if q:
         productos = productos.filter(Q(nombre__icontains=q) | Q(codigo__icontains=q))
 
@@ -141,6 +143,11 @@ def buscar_productos(request):
         'unidad_medida': p.get_unidad_medida_display(),
         'precio_venta': str(p.precio_venta),
         'descuenta_stock': p.descuenta_stock,
+        'descripcion_uso': p.descripcion_uso,
+        'avisos': [
+            {'tipo': a.tipo, 'titulo': a.titulo}
+            for a in p.avisos.all() if a.vigente
+        ],
     } for p in productos.order_by('nombre')[:20]]
 
     return JsonResponse({'resultados': resultados})

@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}{% if aviso %}Editar aviso{% else %}Nuevo aviso{% endif %} — Corralón Nicola{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>{% if aviso %}Editar aviso: {{ aviso.titulo }}{% else %}Nuevo aviso{% endif %}</h1>
+</div>
+
+<form method="post" class="card form-card">
+  {% csrf_token %}
+  {{ form.non_field_errors }}
+  <label>Título
+    {{ form.titulo }}
+    {{ form.titulo.errors }}
+  </label>
+  <label>Mensaje
+    {{ form.mensaje }}
+    {{ form.mensaje.errors }}
+  </label>
+  <div class="grid-2">
+    <label>Tipo
+      {{ form.tipo }}
+    </label>
+    <label>Vence (opcional)
+      {{ form.fecha_vencimiento }}
+      {{ form.fecha_vencimiento.errors }}
+    </label>
+  </div>
+  <label>Productos afectados (opcional; sin selección aplica a todos)
+    {{ form.productos }}
+    {{ form.productos.errors }}
+  </label>
+  <div class="checkbox-row" style="margin-bottom:0.9rem;">{{ form.activo }} <span>Activo</span></div>
+  <div class="actions">
+    <button type="submit" class="primary">Guardar</button>
+    <a class="btn btn-outline" href="{% url 'comunicados:aviso_list' %}">Cancelar</a>
+  </div>
+</form>
+{% endblock %}

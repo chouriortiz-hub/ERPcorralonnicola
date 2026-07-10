@@ -173,6 +173,35 @@
   }
   .copia-etiqueta { display: inline-block; padding: 0.2rem 0.75rem; border: 1px solid var(--negro); border-radius: 999px; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.75rem; }
 
+  /* ---- Ficha informativa de producto (ícono ⓘ) ---- */
+  .info-icon {
+    position: relative; display: inline-flex; align-items: center; justify-content: center;
+    width: 1.1rem; height: 1.1rem; border-radius: 50%; background: var(--gris-fondo); color: var(--texto-muted);
+    font-size: 0.72rem; font-style: normal; cursor: pointer; flex-shrink: 0; vertical-align: middle;
+  }
+  .info-icon:hover, .info-icon:focus, .info-icon.info-icon-open { background: var(--naranja-suave); color: var(--naranja-oscuro); outline: none; }
+  .info-tooltip {
+    display: none; position: absolute; z-index: 30; bottom: 135%; left: 50%; transform: translateX(-50%);
+    width: max-content; max-width: 260px; background: var(--negro); color: #fff; font-size: 0.78rem;
+    font-weight: 400; line-height: 1.35; padding: 0.5rem 0.65rem; border-radius: 7px; text-align: left; white-space: normal;
+  }
+  .info-icon:hover .info-tooltip, .info-icon:focus .info-tooltip, .info-icon.info-icon-open .info-tooltip { display: block; }
+
+  /* ---- Avisos (comunicados) ---- */
+  .aviso-banner {
+    border-radius: 8px; padding: 0.7rem 1rem; margin-bottom: 1rem; font-size: 0.88rem; border: 1px solid transparent;
+  }
+  .aviso-banner-oferta { background: #eafaf1; border-color: #b8e6c9; color: #14532d; }
+  .aviso-banner-prioridad_venta { background: #fdecea; border-color: #f5c2bd; color: #92140c; }
+  .aviso-banner-informativo { background: #e8f0fe; border-color: #c3d7fb; color: #1a3e72; }
+  .aviso-badge {
+    display: inline-block; margin-left: 0.35rem; padding: 0.1rem 0.5rem; border-radius: 999px;
+    font-size: 0.68rem; font-weight: 600; vertical-align: middle; white-space: nowrap;
+  }
+  .aviso-badge-oferta { background: #eafaf1; color: #14532d; }
+  .aviso-badge-prioridad_venta { background: #fdecea; color: #92140c; }
+  .aviso-badge-informativo { background: #e8f0fe; color: #1a3e72; }
+
   @media (max-width: 900px) {
     .sidebar { width: 200px; }
     .topbar { left: 200px; }
@@ -265,6 +294,7 @@
       <div class="nav-group-label">Administración</div>
       <a class="nav-link{% if request.resolver_match.view_name == 'core:usuario_list' %} active{% endif %}" href="{% url 'core:usuario_list' %}"><svg><use href="#ic-users"/></svg>Usuarios</a>
       <a class="nav-link{% if request.resolver_match.view_name == 'core:role_list' %} active{% endif %}" href="{% url 'core:role_list' %}"><svg><use href="#ic-shield"/></svg>Roles</a>
+      <a class="nav-link{% if request.resolver_match.namespace == 'comunicados' %} active{% endif %}" href="{% url 'comunicados:aviso_list' %}"><svg><use href="#ic-file"/></svg>Avisos</a>
     </div>
     {% endif %}
   </nav>
