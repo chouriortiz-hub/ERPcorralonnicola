@@ -36,8 +36,10 @@
   </div>
 
   <div class="checkbox-row" style="margin-bottom:0.9rem;">{{ form.activo }} <span>Usuario activo</span></div>
+  {% if form.is_staff %}
   <div class="checkbox-row" style="margin-bottom:0.9rem;">{{ form.is_staff }} <span>Acceso al admin de Django</span></div>
-  <div class="checkbox-row" style="margin-bottom:0.9rem;">{{ form.is_superuser }} <span>Administrador del sistema (acceso total)</span></div>
+  <div class="checkbox-row" style="margin-bottom:0.9rem;">{{ form.is_superuser }} <span>Superusuario técnico (acceso total, se puede otorgar solo desde una cuenta ya superusuario)</span></div>
+  {% endif %}
 
   <label>Roles
     {{ form.roles }}

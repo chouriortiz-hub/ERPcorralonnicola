@@ -34,7 +34,7 @@ markup: es el único lugar con la plantilla del comprobante.
         <td>${{ linea.subtotal }}</td>
         <td>
           {% if linea.sale_con_reparto %}
-            Reparto{% if not linea.stock_descontado %} (pendiente de salida){% endif %}
+            Reparto{% if linea.cantidad_pendiente > 0 %} (pendiente {{ linea.cantidad_pendiente }}){% endif %}
           {% else %}
             Retira en el momento
           {% endif %}

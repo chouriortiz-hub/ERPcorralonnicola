@@ -4,6 +4,7 @@ psycopg2-binary>=2.9
 dj-database-url>=2.2
 whitenoise>=6.7
 python-decouple>=3.8
+openpyxl>=3.1
 # Para la conexión REAL con ARCA (ex-AFIP), agregar una de estas opciones
 # al completar facturacion/services.py:
 # pyafipws

@@ -40,6 +40,23 @@ def tiene_permiso(user, modulo, nivel_minimo=Role.SOLO_VISUALIZACION):
     return perms.get(modulo, Role.SIN_ACCESO) >= nivel_minimo
 
 
+def es_administrador(user):
+    """
+    ¿Este usuario es "Administrador" del ERP? Incluye tanto a los
+    superusuarios técnicos de Django como a cualquier usuario cuyo rol
+    de negocio le dé nivel ADMINISTRADOR consolidado en todos los módulos
+    (ej. el rol "Administrador" cargado por datos_iniciales). Se usa para
+    reservar la gestión de usuarios/roles sin depender exclusivamente de
+    is_superuser.
+    """
+    if not user.is_authenticated:
+        return False
+    if user.is_superuser:
+        return True
+    perms = get_effective_permissions(user)
+    return all(perms[m] == Role.ADMINISTRADOR for m in MODULOS)
+
+
 def requiere_permiso(modulo, nivel_minimo=Role.SOLO_VISUALIZACION):
     """Decorador de vistas: exige permiso consolidado sobre un módulo."""
     def decorador(view_func):

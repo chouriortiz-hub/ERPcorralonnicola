@@ -251,10 +251,13 @@
     {% if permisos_modulos.stock > 0 %}
     <div class="nav-group">
       <div class="nav-group-label">Stock</div>
+      <a class="nav-link{% if request.resolver_match.view_name == 'stock:dashboard' %} active{% endif %}" href="{% url 'stock:dashboard' %}"><svg><use href="#ic-dashboard"/></svg>Dashboard / Alertas</a>
       <a class="nav-link{% if request.resolver_match.view_name == 'stock:producto_list' %} active{% endif %}" href="{% url 'stock:producto_list' %}"><svg><use href="#ic-box"/></svg>Productos</a>
       <a class="nav-link{% if request.resolver_match.view_name == 'stock:categoria_list' %} active{% endif %}" href="{% url 'stock:categoria_list' %}"><svg><use href="#ic-grid"/></svg>Categorías</a>
       <a class="nav-link{% if request.resolver_match.view_name == 'stock:proveedor_list' %} active{% endif %}" href="{% url 'stock:proveedor_list' %}"><svg><use href="#ic-users"/></svg>Proveedores</a>
+      <a class="nav-link{% if request.resolver_match.view_name == 'stock:boleta_list' or request.resolver_match.view_name == 'stock:boleta_form' or request.resolver_match.view_name == 'stock:boleta_detalle' %} active{% endif %}" href="{% url 'stock:boleta_list' %}"><svg><use href="#ic-file"/></svg>Boletas</a>
       <a class="nav-link{% if request.resolver_match.view_name == 'stock:movimiento_list' %} active{% endif %}" href="{% url 'stock:movimiento_list' %}"><svg><use href="#ic-book"/></svg>Movimientos</a>
+      <a class="nav-link{% if request.resolver_match.view_name == 'stock:nota_list' %} active{% endif %}" href="{% url 'stock:nota_list' %}"><svg><use href="#ic-file"/></svg>Notas</a>
       {% if permisos_modulos.stock > 1 %}
       <a class="nav-link{% if request.resolver_match.view_name == 'stock:ajuste_stock' %} active{% endif %}" href="{% url 'stock:ajuste_stock' %}"><svg><use href="#ic-plus-box"/></svg>Ajuste de stock</a>
       {% endif %}
@@ -285,6 +288,10 @@
     {% if permisos_modulos.finanzas > 0 %}
     <div class="nav-group">
       <div class="nav-group-label">Finanzas</div>
+      {% if permisos_modulos.finanzas > 1 %}
+      <a class="nav-link{% if request.resolver_match.view_name == 'finanzas:caja_actual' %} active{% endif %}" href="{% url 'finanzas:caja_actual' %}"><svg><use href="#ic-cart"/></svg>Mi caja</a>
+      {% endif %}
+      <a class="nav-link{% if request.resolver_match.view_name == 'finanzas:caja_list' or request.resolver_match.view_name == 'finanzas:caja_detalle' %} active{% endif %}" href="{% url 'finanzas:caja_list' %}"><svg><use href="#ic-book"/></svg>Historial de caja</a>
       <a class="nav-link{% if request.resolver_match.view_name == 'finanzas:libro_diario' %} active{% endif %}" href="{% url 'finanzas:libro_diario' %}"><svg><use href="#ic-book"/></svg>Libro diario</a>
     </div>
     {% endif %}

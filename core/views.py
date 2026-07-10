@@ -16,7 +16,7 @@ from ventas.models import Cliente, Pedido
 
 from .forms import RoleForm, UsuarioForm
 from .models import Role, User
-from .permissions import get_effective_permissions
+from .permissions import es_administrador, get_effective_permissions
 from .views_utils import paginar
 
 
@@ -79,7 +79,7 @@ def buscar_global(request):
 
 @login_required
 def usuario_list(request):
-    if not request.user.is_superuser:
+    if not es_administrador(request.user):
         messages.error(request, 'Solo un administrador del sistema puede gestionar usuarios.')
         return redirect('core:dashboard')
 
@@ -93,26 +93,26 @@ def usuario_list(request):
 
 @login_required
 def usuario_form(request, pk=None):
-    if not request.user.is_superuser:
+    if not es_administrador(request.user):
         messages.error(request, 'Solo un administrador del sistema puede gestionar usuarios.')
         return redirect('core:dashboard')
 
     usuario = get_object_or_404(User, pk=pk) if pk else None
     if request.method == 'POST':
-        form = UsuarioForm(request.POST, instance=usuario)
+        form = UsuarioForm(request.POST, instance=usuario, puede_asignar_superuser=request.user.is_superuser)
         if form.is_valid():
             form.save()
             messages.success(request, 'Usuario guardado correctamente.')
             return redirect('core:usuario_list')
     else:
-        form = UsuarioForm(instance=usuario)
+        form = UsuarioForm(instance=usuario, puede_asignar_superuser=request.user.is_superuser)
 
     return render(request, 'core/usuario_form.html', {'form': form, 'usuario': usuario})
 
 
 @login_required
 def usuario_toggle(request, pk):
-    if not request.user.is_superuser:
+    if not es_administrador(request.user):
         messages.error(request, 'Solo un administrador del sistema puede gestionar usuarios.')
         return redirect('core:dashboard')
 
@@ -127,7 +127,7 @@ def usuario_toggle(request, pk):
 
 @login_required
 def role_list(request):
-    if not request.user.is_superuser:
+    if not es_administrador(request.user):
         messages.error(request, 'Solo un administrador del sistema puede gestionar roles.')
         return redirect('core:dashboard')
     return render(request, 'core/role_list.html', {'roles': Role.objects.all().order_by('name')})
@@ -135,7 +135,7 @@ def role_list(request):
 
 @login_required
 def role_form(request, pk=None):
-    if not request.user.is_superuser:
+    if not es_administrador(request.user):
         messages.error(request, 'Solo un administrador del sistema puede gestionar roles.')
         return redirect('core:dashboard')
 

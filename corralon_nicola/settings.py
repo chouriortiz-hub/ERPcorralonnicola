@@ -154,6 +154,13 @@ STORAGES = {
     },
 }
 
+# Archivos subidos por el usuario (ej: adjuntos de boletas de stock). En
+# producción (Railway/Render) el filesystem no es persistente entre deploys;
+# esto alcanza para uso básico, pero para adjuntos que deban sobrevivir
+# redeploys conviene migrar a un storage externo (S3, etc.).
+MEDIA_URL = 'media/'
+MEDIA_ROOT = BASE_DIR / 'media'
+
 # En producción los estáticos se sirven desde STATIC_ROOT, poblado por
 # `collectstatic` antes de arrancar (ver render.yaml). En desarrollo local ese
 # paso no corre, así que WhiteNoise no tiene nada que servir: le indicamos que

@@ -6,6 +6,8 @@ El frontend a medida (`core`, `stock`, `ventas`, `compras`, `facturacion`,
 Django queda montado en `/admin/` solo como respaldo técnico, sin enlaces
 desde la interfaz nueva.
 """
+from django.conf import settings
+from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import include, path
 
@@ -24,3 +26,8 @@ urlpatterns = [
     path('finanzas/', include('finanzas.urls')),
     path('comunicados/', include('comunicados.urls')),
 ]
+
+# Se sirven siempre por Django (no solo en DEBUG): este proyecto no tiene un
+# reverse proxy propio para estáticos de media y el volumen de adjuntos de
+# boletas es bajo. Si el tráfico crece, migrar a un storage externo (S3, etc.).
+urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

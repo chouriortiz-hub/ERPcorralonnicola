@@ -16,10 +16,13 @@ class UsuarioForm(forms.ModelForm):
         model = User
         fields = ['username', 'first_name', 'last_name', 'email', 'dni', 'telefono', 'activo', 'is_staff', 'is_superuser']
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, puede_asignar_superuser=False, **kwargs):
         super().__init__(*args, **kwargs)
         if self.instance.pk:
             self.fields['roles'].initial = Role.objects.filter(usuarios__user=self.instance)
+        if not puede_asignar_superuser:
+            del self.fields['is_staff']
+            del self.fields['is_superuser']
 
     def clean(self):
         cleaned = super().clean()
