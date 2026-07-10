@@ -18,7 +18,13 @@
   {% if pedido.direccion_entrega %}<p><strong>Dirección de entrega:</strong> {{ pedido.direccion_entrega }}</p>{% endif %}
   {% if pedido.observaciones %}<p><strong>Observaciones:</strong> {{ pedido.observaciones }}</p>{% endif %}
   {% if pedido.factura %}<p><strong>Factura:</strong> <a href="{% url 'facturacion:factura_detalle' pedido.factura.pk %}">{{ pedido.factura }}</a></p>{% endif %}
-  {% if pedido.reparto_asignado %}<p><strong>Reparto:</strong> <a href="{% url 'repartos:reparto_detalle' pedido.reparto_asignado.reparto.pk %}">{{ pedido.reparto_asignado.reparto }}</a></p>{% endif %}
+  {% if pedido.repartos_asignados.exists %}
+  <p><strong>Repartos:</strong>
+    {% for rp in pedido.repartos_asignados.all %}
+    <a href="{% url 'repartos:reparto_detalle' rp.reparto.pk %}">#{{ rp.reparto.pk }} ({{ rp.get_estado_salida_display }})</a>{% if not forloop.last %}, {% endif %}
+    {% endfor %}
+  </p>
+  {% endif %}
 
   <div class="table-wrap">
     <table class="data-table">
@@ -31,7 +37,13 @@
           <td class="numeric">${{ linea.precio_unitario|floatformat:2 }}</td>
           <td class="numeric">${{ linea.subtotal|floatformat:2 }}</td>
           <td>{% if linea.sale_con_reparto %}Sí{% else %}—{% endif %}</td>
-          <td>{% if linea.stock_descontado %}<span class="badge badge-verde">Sí</span>{% else %}<span class="badge badge-gris">No</span>{% endif %}</td>
+          <td>
+            {% if linea.sale_con_reparto %}
+              {{ linea.cantidad_salida }} / {{ linea.cantidad }}
+            {% else %}
+              {% if linea.stock_descontado %}<span class="badge badge-verde">Sí</span>{% else %}<span class="badge badge-gris">No</span>{% endif %}
+            {% endif %}
+          </td>
         </tr>
         {% endfor %}
       </tbody>

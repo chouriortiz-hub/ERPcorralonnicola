@@ -33,8 +33,8 @@ class PresupuestoAdmin(admin.ModelAdmin):
 class PedidoLineaInline(admin.TabularInline):
     model = PedidoLinea
     extra = 1
-    fields = ('producto', 'cantidad', 'precio_unitario', 'sale_con_reparto', 'stock_descontado')
-    readonly_fields = ('stock_descontado',)
+    fields = ('producto', 'cantidad', 'precio_unitario', 'sale_con_reparto', 'stock_descontado', 'cantidad_salida')
+    readonly_fields = ('stock_descontado', 'cantidad_salida')
 
 
 @admin.register(Pedido)

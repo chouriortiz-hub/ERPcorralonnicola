@@ -159,13 +159,14 @@ class Pedido(models.Model):
     @property
     def lineas_pendientes_reparto(self):
         """
-        Líneas marcadas para salir con reparto cuyo stock todavía no se
-        descontó (recién se descuenta cuando el RepartoPedido que las lleva
-        marca su salida del depósito, ver RepartoPedido.marcar_salida).
+        Líneas marcadas para salir con reparto con saldo pendiente (su
+        `cantidad_salida` todavía no llegó a `cantidad`). El stock se
+        descuenta de a poco, solo por lo que efectivamente sale del
+        depósito en cada reparto (ver RepartoPedido.registrar_salida).
         """
         return self.lineas.select_related('producto').filter(
-            sale_con_reparto=True, stock_descontado=False, producto__descuenta_stock=True,
-        )
+            sale_con_reparto=True, producto__descuenta_stock=True,
+        ).filter(cantidad_salida__lt=models.F('cantidad'))
 
     @property
     def tiene_lineas_pendientes_reparto(self):
@@ -230,12 +231,20 @@ class PedidoLinea(models.Model):
     )
     stock_descontado = models.BooleanField(
         default=False,
-        help_text='Gestionado por el sistema: indica si esta línea ya impactó el stock (al confirmar el pedido, o al salir el reparto).',
+        help_text='Gestionado por el sistema: indica si esta línea (retiro por mostrador) ya impactó el stock al confirmar el pedido.',
+    )
+    cantidad_salida = models.DecimalField(
+        max_digits=14, decimal_places=3, default=0,
+        help_text='Gestionado por el sistema: cuánto de esta línea ya salió del depósito con reparto (puede ser parcial; ver RepartoPedido.registrar_salida).',
     )
 
     @property
     def subtotal(self):
         return self.cantidad * self.precio_unitario
+
+    @property
+    def cantidad_pendiente(self):
+        return self.cantidad - self.cantidad_salida
 
     def __str__(self):
         return f'{self.producto.codigo} x {self.cantidad}'
