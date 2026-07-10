@@ -1,10 +1,11 @@
 import calendar
 from datetime import date
+from decimal import Decimal, InvalidOperation
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
-from django.db.models import Count, Q
+from django.db.models import Count, F, Q
 from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 
@@ -60,16 +61,36 @@ def reparto_list(request):
     })
 
 
+def _leer_cantidades_salida(request, reparto_pedido):
+    """Lee del POST los campos `cantidad_<linea_id>` con lo que el
+    repartidor cargó como salido para cada línea pendiente del pedido."""
+    cantidades = {}
+    for linea in reparto_pedido.pedido.lineas_pendientes_reparto:
+        valor = request.POST.get(f'cantidad_{linea.pk}')
+        if valor is None or not str(valor).strip():
+            continue
+        try:
+            cantidad = Decimal(str(valor).strip().replace(',', '.'))
+        except InvalidOperation:
+            raise ValidationError(f'La cantidad cargada para "{linea.producto.nombre}" no es válida.')
+        if cantidad > 0:
+            cantidades[linea.pk] = cantidad
+    return cantidades
+
+
 def _pedidos_disponibles_qs():
     """Pedidos confirmados/facturados con líneas de reparto pendientes que
-    todavía no están asignados a ningún Reparto (ningún día)."""
+    no tienen ya un RepartoPedido pendiente de salida en otro reparto (si
+    tuvieron una salida parcial o no salieron, el saldo vuelve a estar
+    disponible para asignarse a un nuevo reparto)."""
     return Pedido.objects.filter(
         estado__in=[Pedido.CONFIRMADO, Pedido.FACTURADO],
         tipo_entrega=Pedido.ENTREGA_REPARTO,
-        reparto_asignado__isnull=True,
         lineas__sale_con_reparto=True,
-        lineas__stock_descontado=False,
         lineas__producto__descuenta_stock=True,
+        lineas__cantidad_salida__lt=F('lineas__cantidad'),
+    ).exclude(
+        repartos_asignados__estado_salida=RepartoPedido.PENDIENTE,
     ).select_related('cliente').distinct().order_by('-fecha')
 
 
@@ -139,12 +160,20 @@ def repartopedido_salida(request, pk):
     if request.method == 'POST':
         accion = request.POST.get('accion')
         try:
-            if accion == 'salio':
-                reparto_pedido.marcar_salida(usuario=request.user)
-                messages.success(
-                    request,
-                    f'Pedido #{reparto_pedido.pedido_id} salió del depósito: se descontó su stock pendiente.',
-                )
+            if accion == 'registrar_salida':
+                cantidades = _leer_cantidades_salida(request, reparto_pedido)
+                reparto_pedido.registrar_salida(usuario=request.user, cantidades=cantidades)
+                if reparto_pedido.estado_salida == RepartoPedido.PARCIAL:
+                    messages.success(
+                        request,
+                        f'Salida parcial registrada para el pedido #{reparto_pedido.pedido_id}: '
+                        'el saldo pendiente queda disponible para un próximo reparto.',
+                    )
+                else:
+                    messages.success(
+                        request,
+                        f'Pedido #{reparto_pedido.pedido_id} salió del depósito: se descontó su stock pendiente.',
+                    )
             elif accion == 'no_salio':
                 reparto_pedido.marcar_no_salio(motivo=request.POST.get('motivo', ''))
                 messages.success(request, f'Pedido #{reparto_pedido.pedido_id} marcado como no salido.')
@@ -181,7 +210,8 @@ def buscar_pedidos_pendientes(request):
     pedidos = Pedido.objects.filter(
         estado__in=[Pedido.CONFIRMADO, Pedido.FACTURADO],
         tipo_entrega=Pedido.ENTREGA_REPARTO,
-        reparto_asignado__isnull=True,
+    ).exclude(
+        repartos_asignados__estado_salida=RepartoPedido.PENDIENTE,
     ).select_related('cliente').distinct()
     if q:
         pedidos = pedidos.filter(Q(pk=q) if q.isdigit() else Q(cliente__nombre__icontains=q))
@@ -265,12 +295,20 @@ def reparto_dia(request, fecha):
             )
             accion = request.POST.get('accion')
             try:
-                if accion == 'salio':
-                    reparto_pedido.marcar_salida(usuario=request.user)
-                    messages.success(
-                        request,
-                        f'Pedido #{reparto_pedido.pedido_id} salió del depósito: se descontó su stock pendiente.',
-                    )
+                if accion == 'registrar_salida':
+                    cantidades = _leer_cantidades_salida(request, reparto_pedido)
+                    reparto_pedido.registrar_salida(usuario=request.user, cantidades=cantidades)
+                    if reparto_pedido.estado_salida == RepartoPedido.PARCIAL:
+                        messages.success(
+                            request,
+                            f'Salida parcial registrada para el pedido #{reparto_pedido.pedido_id}: '
+                            'el saldo pendiente queda disponible para un próximo reparto.',
+                        )
+                    else:
+                        messages.success(
+                            request,
+                            f'Pedido #{reparto_pedido.pedido_id} salió del depósito: se descontó su stock pendiente.',
+                        )
                 elif accion == 'no_salio':
                     reparto_pedido.marcar_no_salio(motivo=request.POST.get('motivo', ''))
                     messages.success(request, f'Pedido #{reparto_pedido.pedido_id} marcado como no salido.')

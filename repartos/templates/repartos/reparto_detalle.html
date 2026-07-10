@@ -37,19 +37,27 @@
             </ul>
           </td>
           <td>
-            {% if rp.estado_salida == 'SALIO' %}<span class="badge badge-verde">Salió</span>
+            {% if rp.estado_salida == 'SALIO' %}<span class="badge badge-verde">Salió completo</span>
+            {% elif rp.estado_salida == 'PARCIAL' %}<span class="badge badge-naranja">Salida parcial</span>
             {% elif rp.estado_salida == 'NO_SALIO' %}<span class="badge badge-rojo">No salió</span>
             {% else %}<span class="badge badge-naranja">Pendiente</span>{% endif %}
             {% if rp.estado_salida == 'PENDIENTE' and permisos_modulos.repartos > 1 %}
-            <form method="post" action="{% url 'repartos:repartopedido_salida' rp.pk %}" style="display:inline;">
+            <form method="post" action="{% url 'repartos:repartopedido_salida' rp.pk %}" style="margin-top:0.4rem;">
               {% csrf_token %}
-              <input type="hidden" name="accion" value="salio">
-              <button type="submit" class="btn-outline">Salió</button>
+              <input type="hidden" name="accion" value="registrar_salida">
+              {% for linea in rp.pedido.lineas_pendientes_reparto %}
+              <div style="font-size:0.8rem;margin-bottom:0.25rem;">
+                {{ linea.producto.nombre }} (pend. {{ linea.cantidad_pendiente }})
+                <input type="number" step="0.001" min="0" max="{{ linea.cantidad_pendiente }}"
+                       name="cantidad_{{ linea.pk }}" value="{{ linea.cantidad_pendiente }}" style="width:80px;">
+              </div>
+              {% endfor %}
+              <button type="submit" class="btn-outline">Registrar salida</button>
             </form>
-            <form method="post" action="{% url 'repartos:repartopedido_salida' rp.pk %}" style="display:inline;">
+            <form method="post" action="{% url 'repartos:repartopedido_salida' rp.pk %}" style="margin-top:0.3rem;">
               {% csrf_token %}
               <input type="hidden" name="accion" value="no_salio">
-              <button type="submit" class="btn-outline">No salió</button>
+              <button type="submit" class="btn-outline">No salió nada</button>
             </form>
             {% endif %}
           </td>

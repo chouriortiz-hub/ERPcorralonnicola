@@ -101,12 +101,41 @@ class RepartoFlowTests(TestCase):
         self.assertContains(resp, 'Cemento')
         self.assertContains(resp, '10')
 
-        resp = self.client.post(url_dia, {'reparto_pedido_id': rp.pk, 'accion': 'salio'})
+        linea = self.pedido.lineas.get()
+        resp = self.client.post(url_dia, {
+            'reparto_pedido_id': rp.pk, 'accion': 'registrar_salida', f'cantidad_{linea.pk}': '10',
+        })
         self.assertRedirects(resp, url_dia)
         rp.refresh_from_db()
         self.assertEqual(rp.estado_salida, RepartoPedido.SALIO)
         self.producto.refresh_from_db()
         self.assertEqual(self.producto.stock_actual, 90)
+
+    def test_salida_parcial_descuenta_solo_lo_cargado_y_deja_saldo_pendiente(self):
+        reparto = Reparto.objects.create(fecha=date.today(), chofer=self.usuario, vehiculo=self.vehiculo)
+        rp = reparto.agregar_pedido(self.pedido)
+        linea = self.pedido.lineas.get()
+
+        rp.registrar_salida(usuario=self.usuario, cantidades={linea.pk: 6})
+
+        self.producto.refresh_from_db()
+        self.assertEqual(self.producto.stock_actual, 94)  # solo salieron 6 de los 10 pedidos
+        rp.refresh_from_db()
+        self.assertEqual(rp.estado_salida, RepartoPedido.PARCIAL)
+        linea.refresh_from_db()
+        self.assertEqual(linea.cantidad_pendiente, 4)
+        self.assertTrue(self.pedido.tiene_lineas_pendientes_reparto)
+
+        # el saldo pendiente vuelve a estar disponible para asignarse a OTRO reparto
+        otro_reparto = Reparto.objects.create(fecha=date.today(), chofer=self.usuario, vehiculo=self.vehiculo)
+        rp2 = otro_reparto.agregar_pedido(self.pedido)
+        rp2.registrar_salida(usuario=self.usuario, cantidades={linea.pk: 4})
+
+        self.producto.refresh_from_db()
+        self.assertEqual(self.producto.stock_actual, 90)
+        rp2.refresh_from_db()
+        self.assertEqual(rp2.estado_salida, RepartoPedido.SALIO)
+        self.assertFalse(self.pedido.tiene_lineas_pendientes_reparto)
 
     def test_nuevo_reparto_muestra_y_asigna_pedidos_disponibles(self):
         self.client.force_login(self.usuario)
