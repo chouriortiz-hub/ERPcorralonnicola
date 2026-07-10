@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Vehículos — Corralón Nicola{% endblock %}
 {% block content %}
+{% include "repartos/_subnav.html" %}
 <div class="page-header">
   <div><h1>Vehículos</h1></div>
   {% if permisos_modulos.repartos > 1 %}<a class="btn btn-primary" href="{% url 'repartos:vehiculo_form' %}">+ Nuevo vehículo</a>{% endif %}

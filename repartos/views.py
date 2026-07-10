@@ -1,8 +1,11 @@
+import calendar
+from datetime import date
+
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
-from django.db.models import Q
-from django.http import JsonResponse
+from django.db.models import Count, Q
+from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 
 from core.models import Role
@@ -12,6 +15,12 @@ from ventas.models import Pedido
 
 from .forms import RepartoForm, VehiculoForm
 from .models import Reparto, RepartoPedido, Vehiculo
+
+MESES_ES = [
+    '', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+    'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
+]
+DIAS_SEMANA_ES = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
 
 
 @login_required
@@ -51,6 +60,19 @@ def reparto_list(request):
     })
 
 
+def _pedidos_disponibles_qs():
+    """Pedidos confirmados/facturados con líneas de reparto pendientes que
+    todavía no están asignados a ningún Reparto (ningún día)."""
+    return Pedido.objects.filter(
+        estado__in=[Pedido.CONFIRMADO, Pedido.FACTURADO],
+        tipo_entrega=Pedido.ENTREGA_REPARTO,
+        reparto_asignado__isnull=True,
+        lineas__sale_con_reparto=True,
+        lineas__stock_descontado=False,
+        lineas__producto__descuenta_stock=True,
+    ).select_related('cliente').distinct().order_by('-fecha')
+
+
 @login_required
 def reparto_form(request):
     if (resp := exigir_permiso(request, 'repartos', Role.CREAR_MODIFICAR)):
@@ -59,11 +81,23 @@ def reparto_form(request):
         form = RepartoForm(request.POST)
         if form.is_valid():
             reparto = form.save()
+            for pedido_id in request.POST.getlist('pedidos_seleccionados'):
+                try:
+                    reparto.agregar_pedido(Pedido.objects.get(pk=pedido_id))
+                except (Pedido.DoesNotExist, ValueError, TypeError):
+                    messages.error(request, f'El pedido #{pedido_id} no existe.')
+                except ValidationError as e:
+                    messages.error(
+                        request,
+                        f'Pedido #{pedido_id}: ' + (' '.join(e.messages) if hasattr(e, 'messages') else str(e)),
+                    )
             messages.success(request, f'Reparto #{reparto.pk} creado.')
             return redirect('repartos:reparto_detalle', pk=reparto.pk)
     else:
         form = RepartoForm()
-    return render(request, 'repartos/reparto_form.html', {'form': form})
+    return render(request, 'repartos/reparto_form.html', {
+        'form': form, 'pedidos_disponibles': _pedidos_disponibles_qs(),
+    })
 
 
 @login_required
@@ -93,7 +127,30 @@ def reparto_detalle(request, pk):
                 messages.error(request, ' '.join(e.messages) if hasattr(e, 'messages') else str(e))
         return redirect('repartos:reparto_detalle', pk=reparto.pk)
 
-    return render(request, 'repartos/reparto_detalle.html', {'reparto': reparto})
+    hay_pendientes = reparto.pedidos.filter(estado_salida=RepartoPedido.PENDIENTE).exists()
+    return render(request, 'repartos/reparto_detalle.html', {'reparto': reparto, 'hay_pendientes': hay_pendientes})
+
+
+@login_required
+def repartopedido_salida(request, pk):
+    if (resp := exigir_permiso(request, 'repartos', Role.CREAR_MODIFICAR)):
+        return resp
+    reparto_pedido = get_object_or_404(RepartoPedido, pk=pk)
+    if request.method == 'POST':
+        accion = request.POST.get('accion')
+        try:
+            if accion == 'salio':
+                reparto_pedido.marcar_salida(usuario=request.user)
+                messages.success(
+                    request,
+                    f'Pedido #{reparto_pedido.pedido_id} salió del depósito: se descontó su stock pendiente.',
+                )
+            elif accion == 'no_salio':
+                reparto_pedido.marcar_no_salio(motivo=request.POST.get('motivo', ''))
+                messages.success(request, f'Pedido #{reparto_pedido.pedido_id} marcado como no salido.')
+        except ValidationError as e:
+            messages.error(request, ' '.join(e.messages) if hasattr(e, 'messages') else str(e))
+    return redirect('repartos:reparto_detalle', pk=reparto_pedido.reparto_id)
 
 
 @login_required
@@ -134,3 +191,132 @@ def buscar_pedidos_pendientes(request):
     } for p in pedidos.order_by('-fecha')[:20] if p.tiene_lineas_pendientes_reparto]
 
     return JsonResponse({'resultados': resultados})
+
+
+@login_required
+def calendario(request):
+    if (resp := exigir_permiso(request, 'repartos', Role.SOLO_VISUALIZACION)):
+        return resp
+
+    hoy = date.today()
+    try:
+        anio = int(request.GET.get('anio', hoy.year))
+        mes = int(request.GET.get('mes', hoy.month))
+        if not (1 <= mes <= 12):
+            raise ValueError
+    except (TypeError, ValueError):
+        anio, mes = hoy.year, hoy.month
+
+    conteos = (
+        RepartoPedido.objects
+        .filter(reparto__fecha__year=anio, reparto__fecha__month=mes)
+        .values('reparto__fecha')
+        .annotate(
+            total=Count('id'),
+            pendientes=Count('id', filter=Q(estado_salida=RepartoPedido.PENDIENTE)),
+        )
+    )
+    conteo_por_dia = {c['reparto__fecha'].day: c for c in conteos}
+
+    semanas = []
+    for semana in calendar.Calendar(firstweekday=0).monthdayscalendar(anio, mes):
+        fila = []
+        for numero in semana:
+            if numero == 0:
+                fila.append(None)
+                continue
+            fecha_dia = date(anio, mes, numero)
+            info = conteo_por_dia.get(numero)
+            fila.append({
+                'numero': numero,
+                'iso': fecha_dia.isoformat(),
+                'total': info['total'] if info else 0,
+                'pendientes': info['pendientes'] if info else 0,
+                'es_hoy': fecha_dia == hoy,
+            })
+        semanas.append(fila)
+
+    mes_anterior = (anio, mes - 1) if mes > 1 else (anio - 1, 12)
+    mes_siguiente = (anio, mes + 1) if mes < 12 else (anio + 1, 1)
+
+    return render(request, 'repartos/calendario.html', {
+        'anio': anio, 'mes': mes, 'nombre_mes': MESES_ES[mes],
+        'dias_semana': DIAS_SEMANA_ES, 'semanas': semanas,
+        'mes_anterior': mes_anterior, 'mes_siguiente': mes_siguiente,
+    })
+
+
+@login_required
+def reparto_dia(request, fecha):
+    if (resp := exigir_permiso(request, 'repartos', Role.SOLO_VISUALIZACION)):
+        return resp
+
+    try:
+        fecha_dia = date.fromisoformat(fecha)
+    except ValueError:
+        raise Http404('Fecha inválida.')
+
+    if request.method == 'POST':
+        if not tiene_permiso(request.user, 'repartos', Role.CREAR_MODIFICAR):
+            messages.error(request, 'No tenés permiso para modificar repartos.')
+        else:
+            reparto_pedido = get_object_or_404(
+                RepartoPedido, pk=request.POST.get('reparto_pedido_id'), reparto__fecha=fecha_dia,
+            )
+            accion = request.POST.get('accion')
+            try:
+                if accion == 'salio':
+                    reparto_pedido.marcar_salida(usuario=request.user)
+                    messages.success(
+                        request,
+                        f'Pedido #{reparto_pedido.pedido_id} salió del depósito: se descontó su stock pendiente.',
+                    )
+                elif accion == 'no_salio':
+                    reparto_pedido.marcar_no_salio(motivo=request.POST.get('motivo', ''))
+                    messages.success(request, f'Pedido #{reparto_pedido.pedido_id} marcado como no salido.')
+            except ValidationError as e:
+                messages.error(request, ' '.join(e.messages) if hasattr(e, 'messages') else str(e))
+        return redirect('repartos:reparto_dia', fecha=fecha)
+
+    repartos_pedidos = (
+        RepartoPedido.objects
+        .filter(reparto__fecha=fecha_dia)
+        .select_related('reparto', 'reparto__chofer', 'reparto__vehiculo', 'pedido', 'pedido__cliente')
+        .order_by('reparto__chofer__username', 'orden')
+    )
+
+    return render(request, 'repartos/reparto_dia.html', {
+        'fecha': fecha_dia, 'repartos_pedidos': repartos_pedidos,
+    })
+
+
+@login_required
+def pedidos_disponibles(request):
+    if (resp := exigir_permiso(request, 'repartos', Role.SOLO_VISUALIZACION)):
+        return resp
+
+    if request.method == 'POST':
+        if not tiene_permiso(request.user, 'repartos', Role.CREAR_MODIFICAR):
+            messages.error(request, 'No tenés permiso para modificar repartos.')
+        else:
+            try:
+                reparto = Reparto.objects.get(pk=request.POST.get('reparto_id'), estado=Reparto.PROGRAMADO)
+                pedido = Pedido.objects.get(pk=request.POST.get('pedido_id'))
+                reparto.agregar_pedido(pedido)
+                messages.success(request, f'Pedido #{pedido.pk} agregado al reparto #{reparto.pk}.')
+            except (Reparto.DoesNotExist, Pedido.DoesNotExist, ValueError, TypeError):
+                messages.error(request, 'El reparto o el pedido seleccionado no existen.')
+            except ValidationError as e:
+                messages.error(request, ' '.join(e.messages) if hasattr(e, 'messages') else str(e))
+        return redirect('repartos:pedidos_disponibles')
+
+    pedidos = _pedidos_disponibles_qs()
+
+    repartos_programados = (
+        Reparto.objects.filter(estado=Reparto.PROGRAMADO)
+        .select_related('chofer', 'vehiculo').order_by('fecha')
+    )
+
+    return render(request, 'repartos/pedidos_disponibles.html', {
+        'pedidos': paginar(request, pedidos), 'repartos_programados': repartos_programados,
+    })

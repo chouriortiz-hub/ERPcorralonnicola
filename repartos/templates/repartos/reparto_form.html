@@ -1,16 +1,49 @@
 {% extends "base.html" %}
 {% block title %}Nuevo reparto — Corralón Nicola{% endblock %}
 {% block content %}
+{% include "repartos/_subnav.html" %}
 <div class="page-header"><h1>Nuevo reparto</h1></div>
-<form method="post" class="card form-card">
+<form method="post">
   {% csrf_token %}
-  {{ form.non_field_errors }}
-  <div class="grid-2">
-    <label>Fecha {{ form.fecha }} {{ form.fecha.errors }}</label>
-    <label>Chofer {{ form.chofer }} {{ form.chofer.errors }}</label>
-    <label>Vehículo {{ form.vehiculo }} {{ form.vehiculo.errors }}</label>
+  <div class="card form-card">
+    {{ form.non_field_errors }}
+    <div class="grid-2">
+      <label>Fecha {{ form.fecha }} {{ form.fecha.errors }}</label>
+      <label>Chofer {{ form.chofer }} {{ form.chofer.errors }}</label>
+      <label>Vehículo {{ form.vehiculo }} {{ form.vehiculo.errors }}</label>
+    </div>
+    <label>Observaciones {{ form.observaciones }}</label>
   </div>
-  <label>Observaciones {{ form.observaciones }}</label>
+
+  <div class="card">
+    <h2>Pedidos sin reparto asignado</h2>
+    <p class="page-subtitle" style="margin-top:-0.5rem;margin-bottom:1rem;">Tildá los que van con este reparto. Después también podés agregar o quitar pedidos desde el detalle.</p>
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead><tr><th></th><th>Pedido</th><th>Cliente</th><th>Dirección</th><th>Productos pendientes</th></tr></thead>
+        <tbody>
+          {% for pedido in pedidos_disponibles %}
+          <tr>
+            <td><input type="checkbox" name="pedidos_seleccionados" value="{{ pedido.pk }}" style="width:auto;margin:0;"></td>
+            <td><a href="{% url 'ventas:pedido_detalle' pedido.pk %}" target="_blank">#{{ pedido.pk }}</a></td>
+            <td>{{ pedido.cliente }}</td>
+            <td>{{ pedido.direccion_entrega|default:"—" }}</td>
+            <td>
+              <ul style="list-style:none;margin:0;padding:0;font-size:0.82rem;">
+                {% for linea in pedido.lineas_pendientes_reparto %}
+                <li><strong>{{ linea.cantidad }}</strong> × {{ linea.producto.nombre }}</li>
+                {% endfor %}
+              </ul>
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="5" class="empty-state">No hay pedidos pendientes de asignar a un reparto.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
   <div class="actions">
     <button type="submit" class="primary">Crear reparto</button>
     <a class="btn btn-outline" href="{% url 'repartos:reparto_list' %}">Cancelar</a>

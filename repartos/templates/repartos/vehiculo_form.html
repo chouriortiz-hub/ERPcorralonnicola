@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% block title %}{% if vehiculo %}Editar vehículo{% else %}Nuevo vehículo{% endif %} — Corralón Nicola{% endblock %}
 {% block content %}
+{% include "repartos/_subnav.html" %}
 <div class="page-header"><h1>{% if vehiculo %}Editar vehículo{% else %}Nuevo vehículo{% endif %}</h1></div>
 <form method="post" class="card form-card">
   {% csrf_token %}

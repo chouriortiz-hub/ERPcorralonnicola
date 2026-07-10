@@ -1,0 +1,8 @@
+{% with vista=request.resolver_match.url_name %}
+<div class="subnav">
+  <a class="subnav-link{% if vista == 'calendario' or vista == 'reparto_dia' %} active{% endif %}" href="{% url 'repartos:calendario' %}">Calendario</a>
+  <a class="subnav-link{% if vista == 'reparto_list' or vista == 'reparto_detalle' or vista == 'reparto_form' %} active{% endif %}" href="{% url 'repartos:reparto_list' %}">Repartos</a>
+  <a class="subnav-link{% if vista == 'pedidos_disponibles' %} active{% endif %}" href="{% url 'repartos:pedidos_disponibles' %}">Pedidos disponibles</a>
+  <a class="subnav-link{% if vista == 'vehiculo_list' or vista == 'vehiculo_form' %} active{% endif %}" href="{% url 'repartos:vehiculo_list' %}">Vehículos</a>
+</div>
+{% endwith %}

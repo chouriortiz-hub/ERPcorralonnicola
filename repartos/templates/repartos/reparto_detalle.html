@@ -1,13 +1,14 @@
 {% extends "base.html" %}
 {% block title %}Reparto #{{ reparto.pk }} — Corralón Nicola{% endblock %}
 {% block content %}
+{% include "repartos/_subnav.html" %}
 <div class="page-header">
   <div><h1>Reparto #{{ reparto.pk }}</h1><div class="page-subtitle">{{ reparto.fecha|date:"d/m/Y" }} — {{ reparto.chofer }} ({{ reparto.vehiculo }})</div></div>
-  {% if reparto.estado == 'PROGRAMADO' and permisos_modulos.repartos > 1 %}
+  {% if hay_pendientes and reparto.estado != 'FINALIZADO' and permisos_modulos.repartos > 1 %}
   <form method="post">
     {% csrf_token %}
     <input type="hidden" name="accion" value="salida">
-    <button type="submit" class="primary">Marcar salida del depósito</button>
+    <button type="submit" class="primary">Marcar salida de todos los pendientes</button>
   </form>
   {% endif %}
 </div>
@@ -18,7 +19,7 @@
 
   <div class="table-wrap">
     <table class="data-table">
-      <thead><tr><th>Orden</th><th>Pedido</th><th>Cliente</th><th>Dirección</th><th>Entrega</th><th></th></tr></thead>
+      <thead><tr><th>Orden</th><th>Pedido</th><th>Cliente</th><th>Dirección</th><th>Productos a despachar</th><th>Salida</th><th>Entrega</th><th></th></tr></thead>
       <tbody>
         {% for rp in reparto.pedidos.all %}
         <tr>
@@ -27,12 +28,38 @@
           <td>{{ rp.pedido.cliente }}</td>
           <td>{{ rp.direccion_entrega|default:"—" }}</td>
           <td>
+            <ul style="list-style:none;margin:0;padding:0;font-size:0.82rem;">
+              {% for linea in rp.pedido.lineas_pendientes_reparto %}
+              <li><strong>{{ linea.cantidad }}</strong> × {{ linea.producto.nombre }}</li>
+              {% empty %}
+              <li class="empty-state" style="padding:0;">—</li>
+              {% endfor %}
+            </ul>
+          </td>
+          <td>
+            {% if rp.estado_salida == 'SALIO' %}<span class="badge badge-verde">Salió</span>
+            {% elif rp.estado_salida == 'NO_SALIO' %}<span class="badge badge-rojo">No salió</span>
+            {% else %}<span class="badge badge-naranja">Pendiente</span>{% endif %}
+            {% if rp.estado_salida == 'PENDIENTE' and permisos_modulos.repartos > 1 %}
+            <form method="post" action="{% url 'repartos:repartopedido_salida' rp.pk %}" style="display:inline;">
+              {% csrf_token %}
+              <input type="hidden" name="accion" value="salio">
+              <button type="submit" class="btn-outline">Salió</button>
+            </form>
+            <form method="post" action="{% url 'repartos:repartopedido_salida' rp.pk %}" style="display:inline;">
+              {% csrf_token %}
+              <input type="hidden" name="accion" value="no_salio">
+              <button type="submit" class="btn-outline">No salió</button>
+            </form>
+            {% endif %}
+          </td>
+          <td>
             {% if rp.estado_entrega == 'ENTREGADO' %}<span class="badge badge-verde">{{ rp.get_estado_entrega_display }}</span>
             {% elif rp.estado_entrega == 'NO_ENTREGADO' %}<span class="badge badge-rojo">{{ rp.get_estado_entrega_display }}</span>
             {% else %}<span class="badge badge-naranja">{{ rp.get_estado_entrega_display }}</span>{% endif %}
           </td>
           <td>
-            {% if rp.estado_entrega == 'PENDIENTE' and reparto.estado != 'PROGRAMADO' and permisos_modulos.repartos > 1 %}
+            {% if rp.estado_entrega == 'PENDIENTE' and rp.estado_salida == 'SALIO' and permisos_modulos.repartos > 1 %}
             <form method="post" action="{% url 'repartos:repartopedido_entrega' rp.pk %}" style="display:inline;">
               {% csrf_token %}
               <input type="hidden" name="accion" value="entregado">
@@ -47,7 +74,7 @@
           </td>
         </tr>
         {% empty %}
-        <tr><td colspan="6" class="empty-state">Todavía no hay pedidos asignados a este reparto.</td></tr>
+        <tr><td colspan="8" class="empty-state">Todavía no hay pedidos asignados a este reparto.</td></tr>
         {% endfor %}
       </tbody>
     </table>

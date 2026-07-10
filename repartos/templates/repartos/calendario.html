@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Calendario de repartos — Corralón Nicola{% endblock %}
+{% block extra_head %}
+<style>
+  .calendario-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 0.5rem; }
+  .calendario-cabecera { text-align: center; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--texto-muted); font-weight: 600; padding-bottom: 0.35rem; }
+  .calendario-celda {
+    min-height: 92px; border: 1px solid var(--gris-borde); border-radius: 8px; padding: 0.5rem;
+    display: flex; flex-direction: column; gap: 0.35rem; text-decoration: none; color: var(--texto);
+    transition: border-color 0.12s, background 0.12s;
+  }
+  a.calendario-celda:hover { border-color: var(--naranja); background: var(--naranja-suave); }
+  .calendario-celda.calendario-vacia { border: none; }
+  .calendario-numero { font-weight: 600; font-size: 0.9rem; }
+  .calendario-celda.es-hoy .calendario-numero {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 22px; height: 22px; border-radius: 50%; background: var(--naranja); color: var(--negro);
+  }
+  .calendario-celda.con-pedidos { border-color: var(--naranja-oscuro); background: var(--naranja-suave); }
+  .calendario-badge { font-size: 0.7rem; font-weight: 600; color: var(--naranja-oscuro); }
+  .calendario-badge .pend { color: #92140c; display: block; }
+</style>
+{% endblock %}
+{% block content %}
+{% include "repartos/_subnav.html" %}
+<div class="page-header">
+  <div><h1>Calendario de repartos</h1><div class="page-subtitle">{{ nombre_mes }} {{ anio }}</div></div>
+  <div class="actions">
+    <a class="btn btn-outline" href="?anio={{ mes_anterior.0 }}&mes={{ mes_anterior.1 }}">&larr; Anterior</a>
+    <a class="btn btn-outline" href="{% url 'repartos:calendario' %}">Hoy</a>
+    <a class="btn btn-outline" href="?anio={{ mes_siguiente.0 }}&mes={{ mes_siguiente.1 }}">Siguiente &rarr;</a>
+  </div>
+</div>
+
+<div class="card">
+  <div class="calendario-grid">
+    {% for nombre_dia in dias_semana %}<div class="calendario-cabecera">{{ nombre_dia }}</div>{% endfor %}
+    {% for semana in semanas %}
+      {% for celda in semana %}
+        {% if celda %}
+        <a href="{% url 'repartos:reparto_dia' fecha=celda.iso %}"
+           class="calendario-celda{% if celda.total %} con-pedidos{% endif %}{% if celda.es_hoy %} es-hoy{% endif %}">
+          <span class="calendario-numero">{{ celda.numero }}</span>
+          {% if celda.total %}
+          <span class="calendario-badge">
+            {{ celda.total }} pedido{{ celda.total|pluralize }}
+            {% if celda.pendientes %}<span class="pend">{{ celda.pendientes }} sin salir</span>{% endif %}
+          </span>
+          {% endif %}
+        </a>
+        {% else %}
+        <div class="calendario-celda calendario-vacia"></div>
+        {% endif %}
+      {% endfor %}
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

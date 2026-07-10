@@ -157,15 +157,19 @@ class Pedido(models.Model):
         return sum((l.subtotal for l in self.lineas.all()), start=0)
 
     @property
-    def tiene_lineas_pendientes_reparto(self):
+    def lineas_pendientes_reparto(self):
         """
-        True si el pedido tiene líneas marcadas para salir con reparto cuyo
-        stock todavía no se descontó (recién se descuenta cuando el reparto
-        que las lleva marca su salida del depósito, ver Reparto.marcar_salida).
+        Líneas marcadas para salir con reparto cuyo stock todavía no se
+        descontó (recién se descuenta cuando el RepartoPedido que las lleva
+        marca su salida del depósito, ver RepartoPedido.marcar_salida).
         """
-        return self.lineas.filter(
+        return self.lineas.select_related('producto').filter(
             sale_con_reparto=True, stock_descontado=False, producto__descuenta_stock=True,
-        ).exists()
+        )
+
+    @property
+    def tiene_lineas_pendientes_reparto(self):
+        return self.lineas_pendientes_reparto.exists()
 
     def actualizar_tipo_entrega(self):
         """

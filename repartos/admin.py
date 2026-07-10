@@ -31,9 +31,17 @@ class RepartoAdmin(admin.ModelAdmin):
 
 @admin.register(RepartoPedido)
 class RepartoPedidoAdmin(admin.ModelAdmin):
-    list_display = ('reparto', 'pedido', 'orden', 'direccion_entrega', 'estado_entrega')
-    list_filter = ('estado_entrega',)
-    actions = ['marcar_entregados']
+    list_display = ('reparto', 'pedido', 'orden', 'direccion_entrega', 'estado_salida', 'estado_entrega')
+    list_filter = ('estado_salida', 'estado_entrega')
+    actions = ['marcar_salieron', 'marcar_entregados']
+
+    def marcar_salieron(self, request, queryset):
+        for rp in queryset:
+            try:
+                rp.marcar_salida(usuario=request.user)
+            except Exception as e:
+                self.message_user(request, str(e), level=messages.ERROR)
+    marcar_salieron.short_description = 'Marcar salida del depósito (descuenta stock pendiente)'
 
     def marcar_entregados(self, request, queryset):
         for rp in queryset:

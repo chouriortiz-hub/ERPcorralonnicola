@@ -8,10 +8,11 @@ Interconexión: solo se pueden asignar a un Reparto los Pedidos que están
 CONFIRMADOS o FACTURADOS y que tienen líneas pendientes de reparto
 (`tiene_lineas_pendientes_reparto`). El stock de esas líneas NO se
 descuenta al confirmar el pedido ni al asignarlo al reparto: se descuenta
-recién cuando el reparto marca su salida del depósito
-(`Reparto.marcar_salida`), momento en el que además pasa de PROGRAMADO a
-EN_CURSO. Al marcar la entrega como realizada, el pedido pasa a estado
-ENTREGADO.
+recién cuando ESE PEDIDO puntual marca su salida del depósito
+(`RepartoPedido.marcar_salida`), no cuando se crea el reparto ni cuando
+salen otros pedidos del mismo reparto. Al marcar la salida del primer
+pedido, el Reparto pasa de PROGRAMADO a EN_CURSO. Al marcar la entrega
+como realizada, el pedido pasa a estado ENTREGADO.
 """
 from django.core.exceptions import ValidationError
 from django.db import models, transaction
@@ -71,35 +72,22 @@ class Reparto(models.Model):
     @transaction.atomic
     def marcar_salida(self, usuario):
         """
-        Momento en que el reparto sale físicamente del depósito. Recién acá
-        se descuenta el stock de las líneas `sale_con_reparto=True` de cada
-        pedido asignado (hasta ahora quedaban pendientes desde que se
-        confirmó el pedido, ver Pedido.confirmar). Pasa el reparto de
-        PROGRAMADO a EN_CURSO.
+        Marca la salida de TODOS los pedidos todavía pendientes del reparto
+        de una sola vez (delega en `RepartoPedido.marcar_salida` para cada
+        uno). Pasa el reparto a EN_CURSO si todavía estaba Programado.
         """
-        if self.estado != self.PROGRAMADO:
-            raise ValidationError('Solo se puede marcar la salida de un reparto Programado.')
+        if self.estado == self.FINALIZADO:
+            raise ValidationError('Este reparto ya está finalizado.')
 
-        for reparto_pedido in self.pedidos.select_related('pedido'):
-            pedido = reparto_pedido.pedido
-            lineas_pendientes = pedido.lineas.select_related('producto').filter(
-                sale_con_reparto=True, stock_descontado=False, producto__descuenta_stock=True,
-            )
-            for linea in lineas_pendientes:
-                registrar_movimiento(
-                    producto=linea.producto,
-                    cantidad=linea.cantidad,
-                    tipo=MovimientoStock.SALIDA,
-                    origen=MovimientoStock.ORIGEN_PEDIDO,
-                    usuario=usuario,
-                    referencia_id=pedido.pk,
-                    motivo=f'Salida a reparto #{self.pk} - Pedido #{pedido.pk}',
-                )
-                linea.stock_descontado = True
-                linea.save(update_fields=['stock_descontado'])
+        pendientes = self.pedidos.filter(estado_salida=RepartoPedido.PENDIENTE).select_related('pedido')
+        if not pendientes.exists():
+            raise ValidationError('No hay pedidos pendientes de salida en este reparto.')
+        for reparto_pedido in pendientes:
+            reparto_pedido.marcar_salida(usuario)
 
-        self.estado = self.EN_CURSO
-        self.save(update_fields=['estado'])
+        if self.estado == self.PROGRAMADO:
+            self.estado = self.EN_CURSO
+            self.save(update_fields=['estado'])
         return self
 
 
@@ -113,20 +101,73 @@ class RepartoPedido(models.Model):
         (NO_ENTREGADO, 'No entregado'),
     ]
 
+    SALIO = 'SALIO'
+    NO_SALIO = 'NO_SALIO'
+    ESTADO_SALIDA_CHOICES = [
+        (PENDIENTE, 'Pendiente'),
+        (SALIO, 'Salió'),
+        (NO_SALIO, 'No salió'),
+    ]
+
     reparto = models.ForeignKey(Reparto, on_delete=models.CASCADE, related_name='pedidos')
     pedido = models.OneToOneField(Pedido, on_delete=models.PROTECT, related_name='reparto_asignado')
     orden = models.PositiveIntegerField(default=1)
     direccion_entrega = models.CharField(max_length=250, blank=True)
+    estado_salida = models.CharField(max_length=15, choices=ESTADO_SALIDA_CHOICES, default=PENDIENTE)
+    motivo_no_salida = models.TextField(blank=True)
     estado_entrega = models.CharField(max_length=15, choices=ESTADO_ENTREGA_CHOICES, default=PENDIENTE)
     observaciones_entrega = models.TextField(blank=True)
 
     class Meta:
         ordering = ['orden']
 
-    def marcar_entregado(self):
+    @transaction.atomic
+    def marcar_salida(self, usuario):
+        """
+        Momento en que ESTE pedido sale físicamente del depósito con el
+        reparto. Recién acá se descuenta el stock de sus líneas
+        `sale_con_reparto=True` pendientes (hasta ahora quedaban pendientes
+        desde que se confirmó el pedido, ver Pedido.confirmar). Si es el
+        primer pedido del reparto en salir, el reparto pasa de PROGRAMADO a
+        EN_CURSO.
+        """
+        if self.estado_salida != self.PENDIENTE:
+            raise ValidationError('Este pedido ya fue marcado como salido o no salido.')
+
+        pedido = self.pedido
+        for linea in pedido.lineas_pendientes_reparto:
+            registrar_movimiento(
+                producto=linea.producto,
+                cantidad=linea.cantidad,
+                tipo=MovimientoStock.SALIDA,
+                origen=MovimientoStock.ORIGEN_PEDIDO,
+                usuario=usuario,
+                referencia_id=pedido.pk,
+                motivo=f'Salida a reparto #{self.reparto_id} - Pedido #{pedido.pk}',
+            )
+            linea.stock_descontado = True
+            linea.save(update_fields=['stock_descontado'])
+
+        self.estado_salida = self.SALIO
+        self.save(update_fields=['estado_salida'])
+
         if self.reparto.estado == Reparto.PROGRAMADO:
+            self.reparto.estado = Reparto.EN_CURSO
+            self.reparto.save(update_fields=['estado'])
+        return self
+
+    def marcar_no_salio(self, motivo=''):
+        if self.estado_salida != self.PENDIENTE:
+            raise ValidationError('Este pedido ya fue marcado como salido o no salido.')
+        self.estado_salida = self.NO_SALIO
+        self.motivo_no_salida = motivo
+        self.save(update_fields=['estado_salida', 'motivo_no_salida'])
+        return self
+
+    def marcar_entregado(self):
+        if self.estado_salida != self.SALIO:
             raise ValidationError(
-                'El reparto todavía no marcó su salida del depósito '
+                'Este pedido todavía no salió del depósito '
                 '(no se puede entregar mercadería que no salió).'
             )
         self.estado_entrega = self.ENTREGADO

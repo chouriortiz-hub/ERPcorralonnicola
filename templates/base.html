@@ -1,3 +1,4 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -36,10 +37,10 @@
     border-bottom: 1px solid var(--negro-borde); flex-shrink: 0;
   }
   .sidebar-brand .logo-mark {
-    width: 34px; height: 34px; border-radius: 8px; background: var(--naranja);
-    color: var(--negro); font-weight: 800; font-size: 1.05rem;
+    width: 34px; height: 34px; border-radius: 8px; background: #fff;
     display: flex; align-items: center; justify-content: center; flex-shrink: 0;
   }
+  .sidebar-brand .logo-mark img { width: 100%; height: 100%; border-radius: 8px; display: block; }
   .sidebar-brand .logo-text { line-height: 1.1; }
   .sidebar-brand .logo-text strong { display: block; color: #fff; font-size: 0.95rem; letter-spacing: 0.02em; }
   .sidebar-brand .logo-text span { display: block; color: var(--naranja); font-size: 0.68rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; }
@@ -146,6 +147,11 @@
   .btn-danger { color: #92140c; border-color: #f5c6cb; }
   .actions { display: flex; gap: 0.75rem; margin-top: 1rem; align-items: center; flex-wrap: wrap; }
 
+  .subnav { display: flex; gap: 0.25rem; margin-bottom: 1.25rem; border-bottom: 1px solid var(--gris-borde); flex-wrap: wrap; }
+  .subnav-link { padding: 0.55rem 0.9rem; font-size: 0.85rem; font-weight: 600; color: var(--texto-muted); text-decoration: none; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+  .subnav-link:hover { color: var(--texto); }
+  .subnav-link.active { color: var(--naranja-oscuro); border-color: var(--naranja); }
+
   .filter-bar { display: flex; gap: 0.75rem; margin-bottom: 1rem; flex-wrap: wrap; align-items: center; }
   .filter-bar input, .filter-bar select { width: auto; min-width: 180px; margin-top: 0; }
 
@@ -163,7 +169,9 @@
     .main-wrapper { margin: 0; padding: 0; }
     main.content { margin: 0; max-width: 100%; padding: 0; }
     .card { box-shadow: none; border: 1px solid #ccc; }
+    .print-page-break { page-break-after: always; break-after: page; }
   }
+  .copia-etiqueta { display: inline-block; padding: 0.2rem 0.75rem; border: 1px solid var(--negro); border-radius: 999px; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.75rem; }
 
   @media (max-width: 900px) {
     .sidebar { width: 200px; }
@@ -191,7 +199,7 @@
 </svg>
 <aside class="sidebar no-print">
   <div class="sidebar-brand">
-    <div class="logo-mark">CN</div>
+    <div class="logo-mark"><img src="{% static 'core/img/logo.svg' %}" alt="Corralón Nicola"></div>
     <div class="logo-text"><strong>CORRALÓN NICOLA</strong><span>Panel de gestión</span></div>
   </div>
   <nav class="sidebar-nav">
@@ -241,9 +249,7 @@
 
     {% if permisos_modulos.repartos > 0 %}
     <div class="nav-group">
-      <div class="nav-group-label">Repartos</div>
-      <a class="nav-link{% if request.resolver_match.view_name == 'repartos:reparto_list' %} active{% endif %}" href="{% url 'repartos:reparto_list' %}"><svg><use href="#ic-truck"/></svg>Repartos</a>
-      <a class="nav-link{% if request.resolver_match.view_name == 'repartos:vehiculo_list' %} active{% endif %}" href="{% url 'repartos:vehiculo_list' %}"><svg><use href="#ic-grid"/></svg>Vehículos</a>
+      <a class="nav-link{% if request.resolver_match.namespace == 'repartos' %} active{% endif %}" href="{% url 'repartos:calendario' %}"><svg><use href="#ic-truck"/></svg>Repartos</a>
     </div>
     {% endif %}
 

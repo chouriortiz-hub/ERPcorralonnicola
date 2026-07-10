@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}Repartos del {{ fecha|date:"d/m/Y" }} — Corralón Nicola{% endblock %}
+{% block extra_head %}
+<style>
+  .productos-despacho { list-style: none; margin: 0; padding: 0; font-size: 0.82rem; }
+  .productos-despacho li { padding: 0.1rem 0; }
+  .productos-despacho .cant { font-weight: 600; }
+</style>
+{% endblock %}
+{% block content %}
+{% include "repartos/_subnav.html" %}
+<div class="page-header">
+  <div><h1>Repartos del {{ fecha|date:"d/m/Y" }}</h1><div class="page-subtitle">Boletas que tocan salir este día</div></div>
+  <a class="btn btn-outline" href="{% url 'repartos:calendario' %}?anio={{ fecha.year }}&mes={{ fecha.month }}">&larr; Volver al calendario</a>
+</div>
+
+<div class="card">
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Pedido</th><th>Cliente</th><th>Dirección</th><th>Chofer / Vehículo</th>
+          <th>Productos a despachar</th><th>Estado</th><th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for rp in repartos_pedidos %}
+        <tr>
+          <td><a href="{% url 'ventas:pedido_detalle' rp.pedido.pk %}">#{{ rp.pedido.pk }}</a></td>
+          <td>{{ rp.pedido.cliente }}</td>
+          <td>{{ rp.direccion_entrega|default:"—" }}</td>
+          <td>{{ rp.reparto.chofer }} — {{ rp.reparto.vehiculo }}</td>
+          <td>
+            <ul class="productos-despacho">
+              {% for linea in rp.pedido.lineas_pendientes_reparto %}
+              <li><span class="cant">{{ linea.cantidad }}</span> × {{ linea.producto.nombre }}</li>
+              {% empty %}
+              <li class="empty-state" style="padding:0;">Sin líneas pendientes</li>
+              {% endfor %}
+            </ul>
+          </td>
+          <td>
+            {% if rp.estado_salida == 'SALIO' %}<span class="badge badge-verde">Salió</span>
+            {% elif rp.estado_salida == 'NO_SALIO' %}<span class="badge badge-rojo">No salió</span>
+            {% else %}<span class="badge badge-naranja">Pendiente</span>{% endif %}
+          </td>
+          <td>
+            {% if rp.estado_salida == 'PENDIENTE' and permisos_modulos.repartos > 1 %}
+            <form method="post" style="display:inline;">
+              {% csrf_token %}
+              <input type="hidden" name="reparto_pedido_id" value="{{ rp.pk }}">
+              <input type="hidden" name="accion" value="salio">
+              <button type="submit" class="btn-outline">Salió</button>
+            </form>
+            <form method="post" style="display:inline;">
+              {% csrf_token %}
+              <input type="hidden" name="reparto_pedido_id" value="{{ rp.pk }}">
+              <input type="hidden" name="accion" value="no_salio">
+              <button type="submit" class="btn-outline">No salió</button>
+            </form>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="7" class="empty-state">No hay pedidos programados para este día.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

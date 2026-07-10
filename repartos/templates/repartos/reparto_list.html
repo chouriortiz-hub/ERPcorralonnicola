@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Repartos — Corralón Nicola{% endblock %}
 {% block content %}
+{% include "repartos/_subnav.html" %}
 <div class="page-header">
   <div><h1>Repartos</h1><div class="page-subtitle">Programación de entregas a domicilio</div></div>
   {% if permisos_modulos.repartos > 1 %}<a class="btn btn-primary" href="{% url 'repartos:reparto_form' %}">+ Nuevo reparto</a>{% endif %}

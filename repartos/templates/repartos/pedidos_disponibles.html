@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}Pedidos disponibles — Corralón Nicola{% endblock %}
+{% block content %}
+{% include "repartos/_subnav.html" %}
+<div class="page-header">
+  <div><h1>Pedidos disponibles</h1><div class="page-subtitle">Boletas confirmadas o facturadas con líneas pendientes de asignar a un reparto</div></div>
+</div>
+
+<div class="card">
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Pedido</th><th>Cliente</th><th>Dirección</th><th>Estado</th><th>Productos pendientes</th>
+          {% if permisos_modulos.repartos > 1 %}<th>Asignar a reparto</th>{% endif %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for pedido in pedidos %}
+        <tr>
+          <td><a href="{% url 'ventas:pedido_detalle' pedido.pk %}">#{{ pedido.pk }}</a></td>
+          <td>{{ pedido.cliente }}</td>
+          <td>{{ pedido.direccion_entrega|default:"—" }}</td>
+          <td>
+            {% if pedido.estado == 'FACTURADO' %}<span class="badge badge-azul">{{ pedido.get_estado_display }}</span>
+            {% else %}<span class="badge badge-naranja">{{ pedido.get_estado_display }}</span>{% endif %}
+          </td>
+          <td>
+            <ul style="list-style:none;margin:0;padding:0;font-size:0.82rem;">
+              {% for linea in pedido.lineas_pendientes_reparto %}
+              <li><strong>{{ linea.cantidad }}</strong> × {{ linea.producto.nombre }}</li>
+              {% endfor %}
+            </ul>
+          </td>
+          {% if permisos_modulos.repartos > 1 %}
+          <td>
+            {% if repartos_programados %}
+            <form method="post" style="display:flex;gap:0.4rem;align-items:center;">
+              {% csrf_token %}
+              <input type="hidden" name="pedido_id" value="{{ pedido.pk }}">
+              <select name="reparto_id" style="margin:0;width:auto;">
+                {% for reparto in repartos_programados %}
+                <option value="{{ reparto.pk }}">{{ reparto.fecha|date:"d/m" }} — {{ reparto.chofer }} ({{ reparto.vehiculo }})</option>
+                {% endfor %}
+              </select>
+              <button type="submit" class="btn-outline">Asignar</button>
+            </form>
+            {% else %}
+            <a class="btn btn-outline" href="{% url 'repartos:reparto_form' %}">Crear reparto</a>
+            {% endif %}
+          </td>
+          {% endif %}
+        </tr>
+        {% empty %}
+        <tr><td colspan="6" class="empty-state">No hay pedidos pendientes de asignar a un reparto.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% include "_paginacion.html" with page_obj=pedidos %}
+</div>
+{% endblock %}
