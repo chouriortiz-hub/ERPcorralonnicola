@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Mi caja — Corralón Nicola{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div><h1>Mi caja</h1><div class="page-subtitle">Apertura y cierre de caja del turno</div></div>
+  <a class="btn btn-outline" href="{% url 'finanzas:caja_list' %}">Ver historial</a>
+</div>
+
+{% if not caja %}
+<form method="post" class="card form-card">
+  {% csrf_token %}
+  <input type="hidden" name="accion" value="abrir">
+  <p>No tenés ninguna caja abierta.</p>
+  <label>Monto inicial (fondo de caja)
+    <input type="number" step="0.01" min="0" name="monto_apertura" value="0" required>
+  </label>
+  <div class="actions">
+    <button type="submit" class="primary">Abrir caja</button>
+  </div>
+</form>
+{% else %}
+<div class="stat-grid" style="grid-template-columns:repeat(2,minmax(180px,1fr));max-width:480px;">
+  <div class="stat-card"><div class="stat-label">Abierta desde</div><div class="stat-value" style="font-size:1.1rem;">{{ caja.fecha_apertura|date:"d/m/Y H:i" }}</div></div>
+  <div class="stat-card"><div class="stat-label">Fondo inicial</div><div class="stat-value">${{ caja.monto_apertura|floatformat:2 }}</div></div>
+</div>
+
+<form method="post" class="card form-card">
+  {% csrf_token %}
+  <input type="hidden" name="accion" value="cerrar">
+  <p>Contá el efectivo real en la caja y registrá el cierre del turno.</p>
+  <label>Efectivo contado
+    <input type="number" step="0.01" min="0" name="efectivo_contado" value="0" required>
+  </label>
+  <label>Observaciones
+    <textarea name="observaciones" rows="2"></textarea>
+  </label>
+  <div class="actions">
+    <button type="submit" class="primary">Cerrar caja</button>
+  </div>
+</form>
+{% endif %}
+{% endblock %}

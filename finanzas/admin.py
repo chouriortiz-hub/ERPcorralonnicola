@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Journal
+from .models import CierreCaja, Journal
 
 
 @admin.register(Journal)
@@ -13,3 +13,9 @@ class JournalAdmin(admin.ModelAdmin):
 
     def has_change_permission(self, request, obj=None):
         return False
+
+
+@admin.register(CierreCaja)
+class CierreCajaAdmin(admin.ModelAdmin):
+    list_display = ('usuario', 'estado', 'fecha_apertura', 'monto_apertura', 'fecha_cierre', 'efectivo_contado', 'diferencia')
+    list_filter = ('estado', 'usuario')

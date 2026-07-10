@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Cierre de caja #{{ cierre.pk }} — Corralón Nicola{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div><h1>Cierre de caja #{{ cierre.pk }}</h1><div class="page-subtitle">{{ cierre.usuario }}</div></div>
+  <a class="btn btn-outline" href="{% url 'finanzas:caja_list' %}">Volver al historial</a>
+</div>
+
+<div class="stat-grid" style="grid-template-columns:repeat(3,minmax(180px,1fr));max-width:720px;">
+  <div class="stat-card"><div class="stat-label">Fondo inicial</div><div class="stat-value">${{ cierre.monto_apertura|floatformat:2 }}</div></div>
+  <div class="stat-card"><div class="stat-label">Ventas del sistema</div><div class="stat-value">{% if cierre.total_ventas_sistema is not None %}${{ cierre.total_ventas_sistema|floatformat:2 }}{% else %}—{% endif %}</div></div>
+  <div class="stat-card"><div class="stat-label">Efectivo contado</div><div class="stat-value">{% if cierre.efectivo_contado is not None %}${{ cierre.efectivo_contado|floatformat:2 }}{% else %}—{% endif %}</div></div>
+</div>
+
+<div class="card">
+  <table class="data-table">
+    <tbody>
+      <tr><th>Estado</th><td><span class="badge">{{ cierre.get_estado_display }}</span></td></tr>
+      <tr><th>Apertura</th><td>{{ cierre.fecha_apertura|date:"d/m/Y H:i" }}</td></tr>
+      <tr><th>Cierre</th><td>{% if cierre.fecha_cierre %}{{ cierre.fecha_cierre|date:"d/m/Y H:i" }}{% else %}—{% endif %}</td></tr>
+      <tr><th>Diferencia</th><td>{% if cierre.diferencia is not None %}${{ cierre.diferencia|floatformat:2 }}{% else %}—{% endif %}</td></tr>
+      <tr><th>Observaciones</th><td>{{ cierre.observaciones|default:"—" }}</td></tr>
+    </tbody>
+  </table>
+</div>
+{% endblock %}

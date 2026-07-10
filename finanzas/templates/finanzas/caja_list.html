@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Historial de caja — Corralón Nicola{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div><h1>Historial de caja</h1><div class="page-subtitle">{% if es_admin_sistema %}Cierres de caja de todos los usuarios{% else %}Tus cierres de caja{% endif %}</div></div>
+  <a class="btn btn-outline" href="{% url 'finanzas:caja_actual' %}">Mi caja</a>
+</div>
+
+<div class="card">
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead><tr><th>Usuario</th><th>Apertura</th><th>Cierre</th><th class="numeric">Fondo inicial</th><th class="numeric">Ventas sistema</th><th class="numeric">Efectivo contado</th><th class="numeric">Diferencia</th><th>Estado</th></tr></thead>
+      <tbody>
+        {% for cierre in cierres %}
+        <tr>
+          <td><a href="{% url 'finanzas:caja_detalle' cierre.pk %}">{{ cierre.usuario }}</a></td>
+          <td>{{ cierre.fecha_apertura|date:"d/m/Y H:i" }}</td>
+          <td>{% if cierre.fecha_cierre %}{{ cierre.fecha_cierre|date:"d/m/Y H:i" }}{% else %}—{% endif %}</td>
+          <td class="numeric">${{ cierre.monto_apertura|floatformat:2 }}</td>
+          <td class="numeric">{% if cierre.total_ventas_sistema is not None %}${{ cierre.total_ventas_sistema|floatformat:2 }}{% else %}—{% endif %}</td>
+          <td class="numeric">{% if cierre.efectivo_contado is not None %}${{ cierre.efectivo_contado|floatformat:2 }}{% else %}—{% endif %}</td>
+          <td class="numeric">{% if cierre.diferencia is not None %}${{ cierre.diferencia|floatformat:2 }}{% else %}—{% endif %}</td>
+          <td><span class="badge">{{ cierre.get_estado_display }}</span></td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="8" class="empty-state">Todavía no hay cierres de caja registrados.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% include "_paginacion.html" with page_obj=cierres %}
+</div>
+{% endblock %}
