@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Importar stock desde Excel — Corralón Nicola{% endblock %}
+{% block content %}
+<div class="page-header"><h1>Importar stock desde Excel</h1></div>
+
+<div class="card form-card">
+  <p>Subí una planilla <code>.xlsx</code> con una columna de <strong>Código</strong> y una de <strong>Stock</strong> (el encabezado puede estar en cualquiera de las primeras 10 filas, y en cualquier hoja cuyo nombre contenga "STOCK", o en la primera hoja si ninguna coincide).</p>
+  <p>Por cada código que exista en el catálogo, se registra un <strong>ajuste de stock</strong> por la diferencia entre el valor de la planilla y el stock actual del sistema (no se pisa el valor directamente, para que quede trazabilidad en el historial de movimientos). Los códigos que no coincidan con ningún producto se informan al final, sin modificar nada.</p>
+  <form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    {{ form.non_field_errors }}
+    <label>{{ form.archivo.label }} {{ form.archivo }} {{ form.archivo.errors }}</label>
+    <p class="page-subtitle">{{ form.archivo.help_text }}</p>
+    <div class="actions">
+      <button type="submit" class="primary">Importar</button>
+      <a class="btn btn-outline" href="{% url 'stock:movimiento_list' %}">Cancelar</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Notas de stock — Corralón Nicola{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div><h1>Notas de stock</h1><div class="page-subtitle">Bitácora de depósito, con referencias opcionales a productos y movimientos</div></div>
+  {% if permisos_modulos.stock > 1 %}<a class="btn btn-primary" href="{% url 'stock:nota_form' %}">+ Nueva nota</a>{% endif %}
+</div>
+
+{% for nota in notas %}
+<div class="card">
+  <h2>{{ nota.titulo }}</h2>
+  <p class="page-subtitle">{{ nota.creado|date:"d/m/Y H:i" }} — {{ nota.usuario }}</p>
+  <p>{{ nota.texto|linebreaksbr }}</p>
+  {% if nota.producto_snapshots.all %}
+  <p><strong>Stock agendado ese día:</strong>
+    {% for s in nota.producto_snapshots.all %}
+    <span class="badge badge-gris">{{ s.codigo_registrado }} - {{ s.nombre_registrado }}: {{ s.stock_registrado }} {{ s.get_unidad_medida_registrada_display }}</span>
+    {% endfor %}
+  </p>
+  {% endif %}
+  {% if nota.movimientos.all %}
+  <p><strong>Movimientos:</strong> {% for m in nota.movimientos.all %}<span class="badge badge-gris">{{ m.get_tipo_display }} {{ m.producto.codigo }} ({{ m.fecha|date:"d/m/Y" }})</span> {% endfor %}</p>
+  {% endif %}
+  {% if permisos_modulos.stock > 1 %}
+  <form method="post" action="{% url 'stock:nota_eliminar' nota.pk %}" onsubmit="return confirm('¿Eliminar esta nota?');">
+    {% csrf_token %}
+    <button type="submit" class="btn-outline btn-danger">Eliminar</button>
+  </form>
+  {% endif %}
+</div>
+{% empty %}
+<div class="card"><p class="empty-state">No hay notas cargadas todavía.</p></div>
+{% endfor %}
+
+{% include "_paginacion.html" with page_obj=notas %}
+{% endblock %}

@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Anular boleta #{{ boleta.numero }} — Corralón Nicola{% endblock %}
+{% block content %}
+<div class="page-header"><h1>Anular boleta #{{ boleta.numero }}</h1></div>
+
+<div class="card form-card">
+  <p>Esta acción revierte los {{ boleta.total_items }} movimiento(s) de stock que generó esta boleta ({{ boleta.get_tipo_display }}). La boleta no se borra: queda marcada como <strong>Anulada</strong> para conservar la trazabilidad.</p>
+  <p>Si alguno de los productos ya no tiene stock suficiente para revertir la salida original, la anulación se cancela por completo y nada se modifica.</p>
+  <form method="post">
+    {% csrf_token %}
+    <label>Motivo de la anulación (opcional)
+      <textarea name="motivo" rows="2"></textarea>
+    </label>
+    <div class="actions">
+      <button type="submit" class="btn-danger">Confirmar anulación</button>
+      <a class="btn btn-outline" href="{% url 'stock:boleta_detalle' boleta.pk %}">Cancelar</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

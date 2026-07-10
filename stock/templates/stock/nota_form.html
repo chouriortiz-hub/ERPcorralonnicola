@@ -1,0 +1,183 @@
+{% extends "base.html" %}
+{% block title %}Nueva nota — Corralón Nicola{% endblock %}
+{% block content %}
+<div class="page-header"><h1>Nueva nota de stock</h1></div>
+
+<form method="post" id="form-nota">
+  {% csrf_token %}
+  <div class="card form-card">
+    <h2>1. Anotación</h2>
+    {{ form.non_field_errors }}
+    <label>Título {{ form.titulo }} {{ form.titulo.errors }}</label>
+    <label>Texto {{ form.texto }} {{ form.texto.errors }}</label>
+  </div>
+
+  <div class="card">
+    <h2>2. Agendar stock de productos (opcional)</h2>
+    <p><small>Seleccioná un producto de la lista para agendar su stock de hoy en esta nota. El número queda congelado como registro: aunque el stock real cambie después, esta nota siempre va a mostrar el valor de este momento.</small></p>
+    <input type="text" id="buscar-producto" placeholder="Buscar producto por nombre o código..." autocomplete="off">
+    <ul id="resultados-producto" class="resultados-lista"></ul>
+
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead><tr><th>Producto</th><th class="numeric">Stock a registrar</th><th style="width:5rem"></th></tr></thead>
+        <tbody id="productos-body">
+          <tr id="productos-vacio"><td colspan="3" class="empty-state">No agendaste ningún producto.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>3. Referenciar movimientos puntuales (opcional)</h2>
+    <p><small>Buscá por producto, código o motivo para encontrar un movimiento concreto (entrada, salida o ajuste) y adjuntarlo a esta nota.</small></p>
+    <input type="text" id="buscar-movimiento" placeholder="Buscar movimiento por producto, código o motivo..." autocomplete="off">
+    <ul id="resultados-movimiento" class="resultados-lista"></ul>
+
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead><tr><th>Fecha</th><th>Producto</th><th>Tipo</th><th class="numeric">Cantidad</th><th>Origen</th><th style="width:5rem"></th></tr></thead>
+        <tbody id="movimientos-body">
+          <tr id="movimientos-vacio"><td colspan="6" class="empty-state">No referenciaste ningún movimiento.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <input type="hidden" name="productos_json" id="productos_json" value='{{ productos_json }}'>
+  <input type="hidden" name="movimientos_json" id="movimientos_json" value='{{ movimientos_json }}'>
+  <div class="actions">
+    <button type="submit" class="btn btn-primary">Guardar nota</button>
+    <a class="btn btn-outline" href="{% url 'stock:nota_list' %}">Cancelar</a>
+  </div>
+</form>
+
+<script>
+(function () {
+  const productosJsonInput = document.getElementById('productos_json');
+  const movimientosJsonInput = document.getElementById('movimientos_json');
+  let productos = [];
+  let movimientos = [];
+  try { productos = JSON.parse(productosJsonInput.value || '[]'); } catch (e) { productos = []; }
+  try { movimientos = JSON.parse(movimientosJsonInput.value || '[]'); } catch (e) { movimientos = []; }
+
+  function renderProductos() {
+    const tbody = document.getElementById('productos-body');
+    tbody.innerHTML = '';
+    if (productos.length === 0) {
+      tbody.innerHTML = '<tr id="productos-vacio"><td colspan="3" class="empty-state">No agendaste ningún producto.</td></tr>';
+    } else {
+      productos.forEach(function (p, idx) {
+        const tr = document.createElement('tr');
+        tr.innerHTML =
+          '<td>' + (p.codigo ? p.codigo + ' - ' : '') + p.nombre + '</td>' +
+          '<td class="numeric">' + p.stock_actual + ' ' + (p.unidad_medida || '') + '</td>' +
+          '<td></td>';
+        const btn = document.createElement('button');
+        btn.type = 'button'; btn.textContent = 'Quitar'; btn.className = 'btn-outline';
+        btn.addEventListener('click', function () { productos.splice(idx, 1); renderProductos(); });
+        tr.lastElementChild.appendChild(btn);
+        tbody.appendChild(tr);
+      });
+    }
+    productosJsonInput.value = JSON.stringify(productos);
+  }
+
+  function renderMovimientos() {
+    const tbody = document.getElementById('movimientos-body');
+    tbody.innerHTML = '';
+    if (movimientos.length === 0) {
+      tbody.innerHTML = '<tr id="movimientos-vacio"><td colspan="6" class="empty-state">No referenciaste ningún movimiento.</td></tr>';
+    } else {
+      movimientos.forEach(function (m, idx) {
+        const tr = document.createElement('tr');
+        tr.innerHTML =
+          '<td>' + m.fecha + '</td>' +
+          '<td>' + m.producto + '</td>' +
+          '<td>' + m.tipo + '</td>' +
+          '<td class="numeric">' + m.cantidad + '</td>' +
+          '<td>' + m.origen + '</td>' +
+          '<td></td>';
+        const btn = document.createElement('button');
+        btn.type = 'button'; btn.textContent = 'Quitar'; btn.className = 'btn-outline';
+        btn.addEventListener('click', function () { movimientos.splice(idx, 1); renderMovimientos(); });
+        tr.lastElementChild.appendChild(btn);
+        tbody.appendChild(tr);
+      });
+    }
+    movimientosJsonInput.value = JSON.stringify(movimientos);
+  }
+
+  let buscarProdTimeout;
+  document.getElementById('buscar-producto').addEventListener('input', function (e) {
+    clearTimeout(buscarProdTimeout);
+    const q = e.target.value.trim();
+    const ul = document.getElementById('resultados-producto');
+    if (!q) { ul.innerHTML = ''; return; }
+    buscarProdTimeout = setTimeout(function () {
+      fetch('{% url "stock:buscar_productos" %}?q=' + encodeURIComponent(q))
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          ul.innerHTML = '';
+          (data.resultados || []).forEach(function (p) {
+            const li = document.createElement('li');
+            const span = document.createElement('span');
+            span.textContent = p.codigo + ' - ' + p.nombre + ' — Stock actual: ' + p.stock_actual + ' ' + p.unidad_medida;
+            const btn = document.createElement('button');
+            btn.type = 'button'; btn.textContent = 'Agendar';
+            btn.addEventListener('click', function () {
+              if (productos.some(function (x) { return String(x.producto_id) === String(p.id); })) {
+                alert('Ese producto ya está agendado en esta nota.');
+                return;
+              }
+              productos.push({ producto_id: p.id, codigo: p.codigo, nombre: p.nombre, stock_actual: p.stock_actual, unidad_medida: p.unidad_medida });
+              renderProductos();
+              document.getElementById('buscar-producto').value = '';
+              ul.innerHTML = '';
+            });
+            li.appendChild(span); li.appendChild(btn);
+            ul.appendChild(li);
+          });
+        });
+    }, 250);
+  });
+
+  let buscarMovTimeout;
+  document.getElementById('buscar-movimiento').addEventListener('input', function (e) {
+    clearTimeout(buscarMovTimeout);
+    const q = e.target.value.trim();
+    const ul = document.getElementById('resultados-movimiento');
+    if (!q) { ul.innerHTML = ''; return; }
+    buscarMovTimeout = setTimeout(function () {
+      fetch('{% url "stock:buscar_movimientos" %}?q=' + encodeURIComponent(q))
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          ul.innerHTML = '';
+          (data.resultados || []).forEach(function (m) {
+            const li = document.createElement('li');
+            const span = document.createElement('span');
+            span.textContent = m.fecha + ' — ' + m.tipo + ' — ' + m.producto + ' — ' + m.cantidad + ' (' + m.origen + ')';
+            const btn = document.createElement('button');
+            btn.type = 'button'; btn.textContent = 'Adjuntar';
+            btn.addEventListener('click', function () {
+              if (movimientos.some(function (x) { return String(x.movimiento_id) === String(m.id); })) {
+                alert('Ese movimiento ya está adjuntado en esta nota.');
+                return;
+              }
+              movimientos.push({ movimiento_id: m.id, fecha: m.fecha, tipo: m.tipo, producto: m.producto, cantidad: m.cantidad, origen: m.origen });
+              renderMovimientos();
+              document.getElementById('buscar-movimiento').value = '';
+              ul.innerHTML = '';
+            });
+            li.appendChild(span); li.appendChild(btn);
+            ul.appendChild(li);
+          });
+        });
+    }, 250);
+  });
+
+  renderProductos();
+  renderMovimientos();
+})();
+</script>
+{% endblock %}

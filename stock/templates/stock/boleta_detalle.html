@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Boleta #{{ boleta.numero }} — Corralón Nicola{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div><h1>Boleta #{{ boleta.numero }}</h1><div class="page-subtitle">{{ boleta.get_tipo_display }} — cargada por {{ boleta.usuario }} el {{ boleta.creado|date:"d/m/Y H:i" }}</div></div>
+  <a class="btn btn-outline" href="{% url 'stock:boleta_list' %}">&larr; Volver al listado</a>
+</div>
+
+<div class="card">
+  <h2>Datos generales</h2>
+  <div class="grid-2">
+    <div><strong>Tipo:</strong> {{ boleta.get_tipo_display }}</div>
+    <div><strong>Estado:</strong>
+      {% if boleta.estado == 'CONFIRMADA' %}<span class="badge badge-azul">{{ boleta.get_estado_display }}</span>
+      {% elif boleta.estado == 'ANULADA' %}<span class="badge badge-gris">{{ boleta.get_estado_display }}</span>
+      {% else %}<span class="badge badge-naranja">{{ boleta.get_estado_display }}</span>{% endif %}
+    </div>
+    <div><strong>Fecha:</strong> {{ boleta.fecha|date:"d/m/Y" }}</div>
+    <div><strong>Responsable:</strong> {{ boleta.responsable|default:"—" }}</div>
+    <div><strong>Monto:</strong> ${{ boleta.monto|floatformat:2 }}</div>
+    <div><strong>Adjunto:</strong> {% if boleta.archivo %}<a href="{{ boleta.archivo.url }}" target="_blank">Ver archivo</a>{% else %}—{% endif %}</div>
+  </div>
+  {% if boleta.observaciones %}<p><strong>Observaciones:</strong> {{ boleta.observaciones }}</p>{% endif %}
+</div>
+
+<div class="card">
+  <h2>Productos</h2>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead><tr><th>Código</th><th>Nombre</th><th class="numeric">Cantidad</th><th>Nota</th><th>Detectado por OCR</th></tr></thead>
+      <tbody>
+        {% for item in boleta.items.all %}
+        <tr>
+          <td>{{ item.producto.codigo }}</td>
+          <td>{{ item.producto.nombre }}</td>
+          <td class="numeric">{{ item.cantidad }} {{ item.producto.get_unidad_medida_display }}</td>
+          <td>{{ item.nota|default:"—" }}</td>
+          <td>{% if item.texto_original %}"{{ item.texto_original }}" ({{ item.confianza|default:"—" }}%){% else %}—{% endif %}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="5" class="empty-state">Esta boleta no tiene ítems.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% if boleta.estado == 'CONFIRMADA' and puede_ajustar %}
+<div class="card">
+  <h2>Corrección retroactiva</h2>
+  <p><small>Ajustar o anular una boleta ya confirmada revierte y vuelve a aplicar sus movimientos de stock. Requiere permiso de Administrador porque afecta el historial ya cerrado.</small></p>
+  <div class="actions">
+    <a class="btn btn-outline" href="{% url 'stock:boleta_ajustar' boleta.pk %}">Corregir productos/cantidades</a>
+    <a class="btn btn-danger" href="{% url 'stock:boleta_anular' boleta.pk %}">Anular boleta</a>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

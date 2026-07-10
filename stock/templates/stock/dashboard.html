@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}Dashboard de Stock — Corralón Nicola{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div><h1>Dashboard de Stock</h1><div class="page-subtitle">Alertas de stock mínimo y valorización del inventario</div></div>
+  <div class="actions" style="margin:0;">
+    <a class="btn btn-outline" href="{% url 'stock:exportar_excel' %}">↓ Exportar Excel</a>
+    {% if permisos_modulos.stock >= 3 %}
+    <a class="btn btn-primary" href="{% url 'stock:importar_excel' %}">↑ Importar Excel</a>
+    {% endif %}
+  </div>
+</div>
+
+<div class="stat-grid">
+  <div class="stat-card">
+    <div class="stat-label">Productos activos</div>
+    <div class="stat-value">{{ total_productos }}</div>
+    <div class="stat-hint">{{ con_control }} con control de stock</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">OK</div>
+    <div class="stat-value">{{ ok }}</div>
+    <div class="stat-hint">por encima de su mínimo</div>
+  </div>
+  <div class="stat-card accent">
+    <div class="stat-label">Bajo mínimo</div>
+    <div class="stat-value">{{ bajo_minimo }}</div>
+  </div>
+  <div class="stat-card accent">
+    <div class="stat-label">Sin stock</div>
+    <div class="stat-value">{{ sin_stock }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Valor total del inventario</div>
+    <div class="stat-value">${{ valor_total|floatformat:2 }}</div>
+    <div class="stat-hint">stock actual × precio de venta</div>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Productos en alerta</h2>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead><tr><th>Código</th><th>Nombre</th><th class="numeric">Stock</th><th class="numeric">Mínimo</th><th>Estado</th></tr></thead>
+      <tbody>
+        {% for p in productos_alerta %}
+        <tr>
+          <td>{{ p.codigo }}</td>
+          <td>{{ p.nombre }}</td>
+          <td class="numeric">{{ p.stock_actual }} {{ p.get_unidad_medida_display }}</td>
+          <td class="numeric">{{ p.stock_minimo }}</td>
+          <td>
+            {% if p.stock_actual <= 0 %}<span class="badge badge-rojo">Sin stock</span>
+            {% else %}<span class="badge badge-naranja">Bajo mínimo</span>{% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="5" class="empty-state">No hay productos en alerta.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

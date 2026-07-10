@@ -103,6 +103,10 @@ class Producto(models.Model):
     def bajo_stock_minimo(self):
         return self.descuenta_stock and self.stock_actual <= self.stock_minimo
 
+    @property
+    def valor_stock(self):
+        return self.stock_actual * self.precio_venta
+
 
 class MovimientoStock(models.Model):
     """
@@ -122,10 +126,16 @@ class MovimientoStock(models.Model):
     ORIGEN_COMPRA = 'COMPRA'
     ORIGEN_PEDIDO = 'PEDIDO'
     ORIGEN_AJUSTE = 'AJUSTE_MANUAL'
+    ORIGEN_BOLETA = 'BOLETA'
+    ORIGEN_AJUSTE_BOLETA = 'AJUSTE_BOLETA'
+    ORIGEN_IMPORTACION = 'IMPORTACION_EXCEL'
     ORIGEN_CHOICES = [
         (ORIGEN_COMPRA, 'Compra a proveedor'),
         (ORIGEN_PEDIDO, 'Pedido / Venta mostrador'),
         (ORIGEN_AJUSTE, 'Ajuste manual'),
+        (ORIGEN_BOLETA, 'Boleta de stock'),
+        (ORIGEN_AJUSTE_BOLETA, 'Corrección retroactiva de boleta'),
+        (ORIGEN_IMPORTACION, 'Importación masiva desde Excel'),
     ]
 
     producto = models.ForeignKey(Producto, on_delete=models.PROTECT, related_name='movimientos')
@@ -200,3 +210,119 @@ def update_pmp(producto, nueva_cantidad, nuevo_precio_unitario):
         producto.pmp = nuevo_pmp
         producto.save(update_fields=['pmp'])
     return producto.pmp
+
+
+class Boleta(models.Model):
+    """
+    Comprobante (remito/boleta de depósito) que agrupa una o más líneas de
+    entrada o salida de stock, con un adjunto opcional (foto/PDF) sobre el
+    que el navegador puede correr OCR para precargar las líneas (ver
+    `stock/static/stock/boleta_ocr.js`). A diferencia de un ajuste manual
+    suelto, la Boleta se corrige o anula como bloque completo (ver
+    `services.ajustar_boleta` / `services.anular_boleta`): nunca se borra
+    físicamente, para no perder trazabilidad de qué movimientos generó.
+    """
+    ENTRADA = MovimientoStock.ENTRADA
+    SALIDA = MovimientoStock.SALIDA
+    TIPO_CHOICES = [
+        (ENTRADA, 'Entrada (recepción de mercadería)'),
+        (SALIDA, 'Salida (retiro / consumo)'),
+    ]
+
+    BORRADOR = 'BORRADOR'
+    CONFIRMADA = 'CONFIRMADA'
+    ANULADA = 'ANULADA'
+    ESTADO_CHOICES = [
+        (BORRADOR, 'Borrador'),
+        (CONFIRMADA, 'Confirmada'),
+        (ANULADA, 'Anulada'),
+    ]
+
+    tipo = models.CharField(max_length=10, choices=TIPO_CHOICES)
+    numero = models.CharField(max_length=50, unique=True)
+    fecha = models.DateField()
+    responsable = models.CharField(
+        max_length=150, blank=True,
+        help_text='Quién recibió o despachó la mercadería (texto libre, ej. nombre del chofer o cliente).',
+    )
+    monto = models.DecimalField(
+        max_digits=14, decimal_places=2, default=0,
+        help_text='Monto total del comprobante, si corresponde (respaldo cuando no hay adjunto).',
+    )
+    archivo = models.FileField(upload_to='boletas/%Y/%m/', blank=True, null=True)
+    ocr_texto = models.TextField(blank=True, help_text='Texto crudo detectado por OCR sobre el adjunto, guardado como respaldo.')
+    observaciones = models.CharField(max_length=250, blank=True)
+    estado = models.CharField(max_length=10, choices=ESTADO_CHOICES, default=BORRADOR)
+
+    usuario = models.ForeignKey(User, on_delete=models.PROTECT, related_name='boletas_stock')
+    creado = models.DateTimeField(auto_now_add=True)
+    actualizado = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-fecha', '-creado']
+        verbose_name_plural = 'Boletas'
+
+    def __str__(self):
+        return f'Boleta #{self.numero} ({self.get_tipo_display()})'
+
+    @property
+    def total_items(self):
+        return self.items.count()
+
+
+class BoletaItem(models.Model):
+    boleta = models.ForeignKey(Boleta, on_delete=models.CASCADE, related_name='items')
+    producto = models.ForeignKey(Producto, on_delete=models.PROTECT, related_name='items_boleta')
+    cantidad = models.DecimalField(max_digits=14, decimal_places=3)
+    nota = models.CharField(max_length=200, blank=True)
+    texto_original = models.CharField(
+        max_length=250, blank=True,
+        help_text='Línea de texto tal como la detectó el OCR, para poder auditar el match automático.',
+    )
+    confianza = models.DecimalField(
+        max_digits=5, decimal_places=2, null=True, blank=True,
+        help_text='Score de confianza (0-100) del match automático por OCR, si esta línea vino de ahí.',
+    )
+
+    def __str__(self):
+        return f'{self.producto.codigo} x {self.cantidad}'
+
+
+class Nota(models.Model):
+    """Bitácora libre de depósito: observaciones que no encajan en un
+    movimiento estructurado, pudiendo agendar productos puntuales (con su
+    stock del día congelado, ver `NotaProducto`) y/o referenciar movimientos
+    concretos (que ya son inmutables por diseño, ver `MovimientoStock`)."""
+    titulo = models.CharField(max_length=150)
+    texto = models.TextField()
+    movimientos = models.ManyToManyField(MovimientoStock, blank=True, related_name='notas')
+    usuario = models.ForeignKey(User, on_delete=models.PROTECT, related_name='notas_stock')
+    creado = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-creado']
+
+    def __str__(self):
+        return self.titulo
+
+
+class NotaProducto(models.Model):
+    """
+    Registro CONGELADO del stock de un producto al momento de agendarlo en
+    una Nota. A propósito no es un simple M2M a Producto: si el stock real
+    cambia después (o incluso si el producto cambia de nombre/código), este
+    número y estos textos no se actualizan — quedan a modo de registro de
+    "cuánto había ese día", no como un enlace en vivo al producto.
+    """
+    nota = models.ForeignKey(Nota, on_delete=models.CASCADE, related_name='producto_snapshots')
+    producto = models.ForeignKey(Producto, on_delete=models.PROTECT, related_name='+')
+    codigo_registrado = models.CharField(max_length=30)
+    nombre_registrado = models.CharField(max_length=200)
+    stock_registrado = models.DecimalField(max_digits=14, decimal_places=3)
+    unidad_medida_registrada = models.CharField(max_length=3, choices=UnidadMedida.choices)
+
+    class Meta:
+        verbose_name_plural = 'Snapshots de producto en notas'
+
+    def __str__(self):
+        return f'{self.codigo_registrado} = {self.stock_registrado} (al {self.nota.creado:%d/%m/%Y})'

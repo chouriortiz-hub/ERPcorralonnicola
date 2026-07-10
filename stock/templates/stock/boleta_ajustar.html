@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+{% block title %}Corregir boleta #{{ boleta.numero }} — Corralón Nicola{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div><h1>Corregir boleta #{{ boleta.numero }}</h1><div class="page-subtitle">{{ boleta.get_tipo_display }} del {{ boleta.fecha|date:"d/m/Y" }} — corrección retroactiva de productos y cantidades</div></div>
+</div>
+
+<div class="card">
+  <p>Al guardar, el sistema revierte los movimientos de stock que generaron las líneas actuales y aplica los de las líneas nuevas, todo en un mismo paso. Si algún producto ya no tiene stock suficiente para revertir su movimiento original, la corrección completa se cancela y nada cambia.</p>
+</div>
+
+<form method="post" id="form-ajuste">
+  {% csrf_token %}
+  <div class="card">
+    <h2>Productos</h2>
+    <input type="text" id="buscar-producto" placeholder="Buscar producto por nombre o código..." autocomplete="off">
+    <ul id="resultados-producto" class="resultados-lista"></ul>
+
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead><tr><th>Producto</th><th style="width:7rem">Cantidad</th><th>Nota</th><th style="width:5rem"></th></tr></thead>
+        <tbody id="items-body">
+          <tr id="items-vacio"><td colspan="4" class="empty-state">Esta boleta no tiene productos.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <input type="hidden" name="items_json" id="items_json" value='{{ items_json }}'>
+  <div class="actions">
+    <button type="submit" class="btn btn-primary">Guardar corrección</button>
+    <a class="btn btn-outline" href="{% url 'stock:boleta_detalle' boleta.pk %}">Cancelar</a>
+  </div>
+</form>
+
+<script id="productos-data" type="application/json">{{ productos_json|safe }}</script>
+<script>
+(function () {
+  const itemsJsonInput = document.getElementById('items_json');
+  let items = [];
+  try {
+    items = JSON.parse(itemsJsonInput.value || '[]').map(function (it) {
+      return {
+        producto_id: it.producto_id, codigo: it.codigo || '', nombre: it.nombre || '',
+        unidad_medida: it.unidad_medida || '', cantidad: it.cantidad !== undefined ? String(it.cantidad) : '1',
+        nota: it.nota || '', texto_original: it.texto_original || '', confianza: it.confianza || '',
+      };
+    });
+  } catch (e) { items = []; }
+
+  function renderItems() {
+    const tbody = document.getElementById('items-body');
+    tbody.innerHTML = '';
+    if (items.length === 0) {
+      tbody.innerHTML = '<tr id="items-vacio"><td colspan="4" class="empty-state">Esta boleta no tiene productos.</td></tr>';
+      itemsJsonInput.value = '[]';
+      return;
+    }
+    items.forEach(function (item, idx) {
+      const tr = document.createElement('tr');
+
+      const tdProd = document.createElement('td');
+      tdProd.textContent = (item.codigo ? item.codigo + ' - ' : '') + item.nombre;
+      tr.appendChild(tdProd);
+
+      const tdCant = document.createElement('td');
+      const inputCant = document.createElement('input');
+      inputCant.type = 'number'; inputCant.min = '0.001'; inputCant.step = '0.001'; inputCant.value = item.cantidad;
+      inputCant.addEventListener('change', function () { items[idx].cantidad = inputCant.value; sincronizar(); });
+      tdCant.appendChild(inputCant);
+      tr.appendChild(tdCant);
+
+      const tdNota = document.createElement('td');
+      const inputNota = document.createElement('input');
+      inputNota.type = 'text'; inputNota.value = item.nota;
+      inputNota.addEventListener('change', function () { items[idx].nota = inputNota.value; sincronizar(); });
+      tdNota.appendChild(inputNota);
+      tr.appendChild(tdNota);
+
+      const tdQuitar = document.createElement('td');
+      const btnQuitar = document.createElement('button');
+      btnQuitar.type = 'button'; btnQuitar.textContent = 'Quitar'; btnQuitar.className = 'btn-outline';
+      btnQuitar.addEventListener('click', function () { items.splice(idx, 1); renderItems(); });
+      tdQuitar.appendChild(btnQuitar);
+      tr.appendChild(tdQuitar);
+
+      tbody.appendChild(tr);
+    });
+    sincronizar();
+  }
+
+  function sincronizar() { itemsJsonInput.value = JSON.stringify(items); }
+
+  let buscarTimeout;
+  document.getElementById('buscar-producto').addEventListener('input', function (e) {
+    clearTimeout(buscarTimeout);
+    const q = e.target.value.trim();
+    const ul = document.getElementById('resultados-producto');
+    if (!q) { ul.innerHTML = ''; return; }
+    buscarTimeout = setTimeout(function () {
+      fetch('{% url "stock:buscar_productos" %}?q=' + encodeURIComponent(q))
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          ul.innerHTML = '';
+          (data.resultados || []).forEach(function (p) {
+            const li = document.createElement('li');
+            const span = document.createElement('span');
+            span.textContent = p.codigo + ' - ' + p.nombre + ' — Stock: ' + p.stock_actual + ' ' + p.unidad_medida;
+            const btn = document.createElement('button');
+            btn.type = 'button'; btn.textContent = 'Agregar';
+            btn.addEventListener('click', function () {
+              const existente = items.find(function (it) { return String(it.producto_id) === String(p.id); });
+              if (existente) {
+                existente.cantidad = String(parseFloat(existente.cantidad || 0) + 1);
+              } else {
+                items.push({ producto_id: p.id, codigo: p.codigo, nombre: p.nombre, unidad_medida: p.unidad_medida, cantidad: '1', nota: '', texto_original: '', confianza: '' });
+              }
+              renderItems();
+              document.getElementById('buscar-producto').value = '';
+              ul.innerHTML = '';
+            });
+            li.appendChild(span); li.appendChild(btn);
+            ul.appendChild(li);
+          });
+        });
+    }, 250);
+  });
+
+  document.getElementById('form-ajuste').addEventListener('submit', function (e) {
+    if (items.length === 0) {
+      e.preventDefault();
+      alert('La boleta debe tener al menos un producto.');
+      return;
+    }
+    sincronizar();
+  });
+
+  renderItems();
+})();
+</script>
+{% endblock %}
