@@ -80,8 +80,8 @@
   .topbar-user .user-info { line-height: 1.15; font-size: 0.82rem; }
   .topbar-user .user-info strong { display: block; font-size: 0.85rem; }
   .topbar-user .user-info span { color: var(--texto-muted); }
-  .topbar-user a.logout-link { color: var(--texto-muted); font-size: 0.8rem; text-decoration: none; border: 1px solid var(--gris-borde); border-radius: 6px; padding: 0.35rem 0.6rem; }
-  .topbar-user a.logout-link:hover { border-color: var(--naranja); color: var(--naranja-oscuro); }
+  .topbar-user .logout-link { background: none; font-family: inherit; cursor: pointer; color: var(--texto-muted); font-size: 0.8rem; text-decoration: none; border: 1px solid var(--gris-borde); border-radius: 6px; padding: 0.35rem 0.6rem; }
+  .topbar-user .logout-link:hover { border-color: var(--naranja); color: var(--naranja-oscuro); }
 
   /* ---- Layout wrapper ---- */
   .main-wrapper { margin-left: var(--sidebar-w); padding-top: var(--topbar-h); min-height: 100vh; }
@@ -320,7 +320,10 @@
       <span>{{ request.user.username }}</span>
     </div>
     <div class="avatar">{{ request.user.username|slice:":2"|upper }}</div>
-    <a class="logout-link" href="{% url 'core:logout' %}">Salir</a>
+    <form method="post" action="{% url 'core:logout' %}" style="display:inline;">
+      {% csrf_token %}
+      <button type="submit" class="logout-link">Salir</button>
+    </form>
   </div>
 </header>
 
