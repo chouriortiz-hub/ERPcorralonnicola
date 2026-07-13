@@ -20,8 +20,9 @@ class ProductoForm(forms.ModelForm):
         model = Producto
         fields = [
             'codigo', 'nombre', 'categoria', 'proveedor_habitual', 'unidad_medida',
-            'stock_minimo', 'precio_venta', 'descuenta_stock', 'activo',
+            'stock_minimo', 'precio_venta', 'descuenta_stock', 'activo', 'descripcion_uso',
         ]
+        widgets = {'descripcion_uso': forms.Textarea(attrs={'rows': 3})}
 
 
 class AjusteStockForm(forms.Form):

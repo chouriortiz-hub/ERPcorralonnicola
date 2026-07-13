@@ -10,7 +10,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
 from core.models import Role
-from core.permissions import tiene_permiso
+from core.permissions import es_administrador, tiene_permiso
 from core.views_utils import exigir_permiso, paginar
 
 from . import services
@@ -90,12 +90,16 @@ def producto_form(request, pk=None):
     producto = get_object_or_404(Producto, pk=pk) if pk else None
     if request.method == 'POST':
         form = ProductoForm(request.POST, instance=producto)
+        if not es_administrador(request.user):
+            form.fields['descripcion_uso'].disabled = True
         if form.is_valid():
             form.save()
             messages.success(request, 'Producto guardado correctamente.')
             return redirect('stock:producto_list')
     else:
         form = ProductoForm(instance=producto)
+        if not es_administrador(request.user):
+            form.fields['descripcion_uso'].disabled = True
     return render(request, 'stock/producto_form.html', {'form': form, 'producto': producto})
 
 

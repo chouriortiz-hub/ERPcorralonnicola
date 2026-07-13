@@ -17,6 +17,10 @@
   {% if producto %}
   <p class="page-subtitle">Stock actual: {{ producto.stock_actual }} {{ producto.get_unidad_medida_display }} / PMP: ${{ producto.pmp|floatformat:2 }} — se actualizan solo a través de compras, pedidos o ajustes de stock.</p>
   {% endif %}
+  <label>Descripción / uso (ficha visible en Nuevo Pedido)
+    {{ form.descripcion_uso }}
+    {% if form.descripcion_uso.field.disabled %}<small>Solo un Administrador puede editar esta ficha.</small>{% endif %}
+  </label>
   <div class="checkbox-row" style="margin-bottom:0.9rem;">{{ form.descuenta_stock }} <span>Descuenta stock automáticamente</span></div>
   <div class="checkbox-row" style="margin-bottom:0.9rem;">{{ form.activo }} <span>Producto activo</span></div>
   <div class="actions">
