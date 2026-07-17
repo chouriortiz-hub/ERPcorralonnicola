@@ -56,11 +56,11 @@ class Command(BaseCommand):
             # core.permissions.es_administrador).
             dict(name='Administrador', stock_perm=3, ventas_perm=3, compras_perm=3,
                  facturacion_perm=3, repartos_perm=3, finanzas_perm=3),
-            # Solo pedidos (ventas), stock en modo lectura (sin poder
-            # editar/eliminar/agregar) y finanzas para poder abrir/cerrar su
-            # caja y consultar el libro diario.
+            # Pedidos y presupuestos (ventas) con facturación incluida, stock
+            # en modo lectura (sin poder editar/eliminar/agregar) y finanzas
+            # para poder abrir/cerrar su caja y consultar el libro diario.
             dict(name='Venta Mostrador', stock_perm=1, ventas_perm=2, compras_perm=0,
-                 facturacion_perm=0, repartos_perm=0, finanzas_perm=2),
+                 facturacion_perm=2, repartos_perm=0, finanzas_perm=2),
             dict(name='Encargado de Depósito', stock_perm=2, ventas_perm=0, compras_perm=2,
                  facturacion_perm=0, repartos_perm=0, finanzas_perm=0),
             # Solo repartos: ver el calendario de pedidos agendados y marcar

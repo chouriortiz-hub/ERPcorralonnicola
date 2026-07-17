@@ -45,7 +45,7 @@ def puntoventa_list(request):
 
 @login_required
 def puntoventa_form(request, pk=None):
-    if (resp := exigir_permiso(request, 'facturacion', Role.CREAR_MODIFICAR)):
+    if (resp := exigir_permiso(request, 'facturacion', Role.ADMINISTRADOR)):
         return resp
     punto_venta = get_object_or_404(PuntoVenta, pk=pk) if pk else None
     if request.method == 'POST':
